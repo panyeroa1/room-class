@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Orbit Sidebar - Global Edition</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-body: #050505;
+      --bg-surface: #111111;
+      --bg-chat-bubble: #1a1a1a;
+      --text-primary: #ffffff;
+      --text-secondary: #888888;
+      --status-live: #EB5757; 
+      --status-active: #27AE60;
+      --accent: #fff;
+      --font: "Inter", -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      background: var(--bg-body);
+      color: var(--text-primary);
+      font-family: var(--font);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* === UTILITY MODAL === */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: #000;
+      z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease;
+    }
+    .modal-overlay.hidden { opacity: 0; pointer-events: none; }
+    
+    .modal-card {
+      width: 100%; max-width: 320px;
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    .modal-header { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #666; margin-bottom: 8px; }
+
+    /* Modal Tabs */
+    .mode-tabs { display: flex; background: #1a1a1a; padding: 4px; border-radius: 8px; margin-bottom: 12px; }
+    .mode-tab { 
+      flex: 1; border: none; background: transparent; color: #666; 
+      padding: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 6px; transition: 0.2s; 
+    }
+    .mode-tab.active { background: #333; color: white; }
+
+    .modal-input {
+      width: 100%; padding: 12px;
+      background: #111; border: 1px solid #333; color: white;
+      border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s;
+    }
+    .modal-input:focus { border-color: #666; }
+    
+    .btn-action {
+      width: 100%; padding: 14px;
+      background: white; color: black;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-action:active { transform: scale(0.98); }
+
+    /* === MAIN APP === */
+    .app-container {
+      width: 100%; max-width: 500px; height: 100%;
+      display: flex; flex-direction: column;
+      position: relative;
+      background: var(--bg-body);
+    }
+
+    @media (min-width: 501px) {
+      .app-container { height: 95vh; border-radius: 16px; border: 1px solid #222; background: var(--bg-surface); overflow: hidden; }
+    }
+
+    /* === HEADER & SHARE ICONS === */
+    .header {
+      padding: 12px 16px; z-index: 20;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(17,17,17,0.9);
+      border-bottom: 1px solid #222;
+    }
+    
+    .room-info { display: flex; flex-direction: column; }
+    .room-label { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+    .room-id { font-family: monospace; font-size: 16px; font-weight: 600; color: white; letter-spacing: 1px;}
+    
+    /* Share Actions Row */
+    .share-row { display: flex; gap: 6px; align-items: center; }
+    
+    .share-btn {
+      width: 28px; height: 28px; border-radius: 6px; border: none;
+      background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s ease; position: relative;
+    }
+    .share-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+    .share-btn:active { transform: scale(0.95); }
+    .share-icon { width: 14px; height: 14px; fill: #aaa; transition: fill 0.2s; }
+    .btn-copy:hover .share-icon { fill: #fff; }
+    .btn-wa:hover .share-icon { fill: #25D366; }
+    .btn-sms:hover .share-icon { fill: #34B7F1; }
+    .btn-mail:hover .share-icon { fill: #EA4335; }
+    .btn-fb:hover .share-icon { fill: #0084FF; }
+
+    /* === SETTINGS BAR === */
+    .settings-bar {
+      padding: 10px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      border-bottom: 1px solid #222; background: var(--bg-surface);
+    }
+    .setting-group label { display: block; font-size: 9px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600; }
+    select {
+      width: 100%; background: transparent; color: white; border: none;
+      font-size: 12px; font-family: var(--font); cursor: pointer;
+      border-bottom: 1px solid #333; padding-bottom: 4px;
+    }
+    select option { background: #111; color: white; }
+
+    /* === TRANSCRIPT AREA === */
+    .chat-area {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%);
+      mask-image: linear-gradient(to bottom, transparent 0%, black 5%);
+      scroll-behavior: smooth;
+    }
+
+    .msg-item { animation: slideIn 0.3s ease; display: flex; flex-direction: column; gap: 4px; }
+    .msg-meta { font-size: 10px; color: var(--text-secondary); display: flex; justify-content: space-between; padding: 0 2px;}
+    .msg-name { font-weight: 600; color: #fff; }
+    
+    .msg-bubble {
+      background: var(--bg-chat-bubble); padding: 10px 14px; border-radius: 4px 14px 14px 14px;
+      font-size: 13px; line-height: 1.4; color: #eee; border: 1px solid #2a2a2a;
+      word-wrap: break-word;
+    }
+    
+    .msg-item.me { align-items: flex-end; opacity: 1; }
+    .msg-item.me .msg-bubble { background: #222; border-radius: 14px 4px 14px 14px; border-color: #333; text-align: right; }
+    
+    /* Ghost Bubble (Interim Results) */
+    .ghost-bubble {
+        opacity: 0.6;
+        font-style: italic;
+        border-style: dashed;
+        border-color: #444;
+        transition: opacity 0.2s;
+    }
+
+    /* === FOOTER CONTROLS === */
+    .footer {
+      padding: 16px; background: linear-gradient(to top, var(--bg-body) 20%, transparent);
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+
+    .viz-canvas { width: 100%; height: 30px; opacity: 0.5; }
+
+    .controls-row { display: flex; align-items: center; gap: 20px; width: 100%; justify-content: center; }
+
+    .mic-btn {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: #111; border: 1px solid #333; color: white;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s; position: relative;
+    }
+    .mic-btn:hover { background: #222; transform: scale(1.05); }
+    .mic-btn.active { background: var(--status-live); border-color: var(--status-live); box-shadow: 0 0 20px rgba(235, 87, 87, 0.3); }
+
+    .status-badge {
+      position: absolute; top: -25px; 
+      background: #222; padding: 2px 8px; border-radius: 10px;
+      font-size: 9px; font-weight: 600; color: #888;
+      border: 1px solid #333; transition: opacity 0.3s;
+    }
+
+    .toggle-wrap { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #888; cursor: pointer; }
+    .switch { position: relative; display: inline-block; width: 30px; height: 18px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background-color: #333; border-radius: 34px; transition: .3s; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .3s; }
+    input:checked + .slider { background-color: var(--status-active); }
+    input:checked + .slider:before { transform: translateX(12px); }
+
+    .toast {
+      position: absolute; top: 60px; left: 50%; transform: translateX(-50%) translateY(-20px);
+      background: white; color: black; padding: 6px 16px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 9999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .hidden { display: none !important; }
+
+    /* === HELPER CLASSES === */
+    .modal-hint { font-size: 11px; color: #555; margin-bottom: 10px; }
+    .input-spaced { margin-bottom: 10px; }
+    .placeholder-text { text-align: center; margin-top: 40px; color: #333; font-size: 12px; font-style: italic; }
+    .mic-container { position: relative; display: flex; justify-content: center; }
+    .status-hidden { opacity: 0; }
+    .spacer-60 { width: 60px; }
+
+  </style>
+</head>
+
+<body>
+
+<!-- 1. COMPACT UTILITY MODAL -->
+<div id="welcomeModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">Session Setup</div>
+    <input type="text" id="usernameInput" class="modal-input" placeholder="Your Name" maxlength="15">
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabCreate">Create</button>
+      <button class="mode-tab" id="tabJoin">Join</button>
+    </div>
+    <div id="createMode" class="mode-content">
+      <div class="modal-hint">Start a new session and get a Room ID.</div>
+      <button id="modalCreateBtn" class="btn-action">Start Session</button>
+    </div>
+    <div id="joinMode" class="mode-content hidden">
+      <input type="text" id="classIdInput" class="modal-input input-spaced" placeholder="Room ID (e.g. A1B2C3)" maxlength="6">
+      <button id="modalJoinBtn" class="btn-action">Connect</button>
+    </div>
+  </div>
+</div>
+
+<audio id="tts" autoplay></audio>
+<div id="toast" class="toast">Link copied to clipboard</div>
+
+<div class="app-container">
+  
+  <!-- HEADER -->
+  <div class="header">
+    <div class="room-info">
+      <span class="room-label">Room ID</span>
+      <span id="roomIdDisplay" class="room-id">...</span>
+    </div>
+    
+    <!-- SOCIAL SHARE ICONS -->
+    <div class="share-row">
+      <button class="share-btn btn-wa" id="shareWa" title="WhatsApp"><svg class="share-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></button>
+      <button class="share-btn btn-sms" id="shareSms" title="SMS"><svg class="share-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/></svg></button>
+      <button class="share-btn btn-mail" id="shareMail" title="Email"><svg class="share-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></button>
+      <button class="share-btn btn-fb" id="shareFb" title="Messenger"><svg class="share-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.43 3.82 7.03V22l3.37-1.85c.87.24 1.8.38 2.81.38 5.52 0 10-4.03 10-9s-4.48-9-10-9zm1.2 13l-2.43-2.6-4.75 2.6 5.22-5.55 2.43 2.6 4.75-2.6-5.22 5.55z"/></svg></button>
+      <button class="share-btn btn-copy" id="copyIdBtn" title="Copy to Clipboard"><svg class="share-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="settings-bar">
+    <div class="setting-group">
+      <label for="srcLang">I SPEAK</label>
+      <select id="srcLang" title="Select your spoken language"></select>
+    </div>
+    <div class="setting-group">
+      <label for="tgtLang">I LISTEN</label>
+      <select id="tgtLang" title="Select your listening language"></select>
+    </div>
+  </div>
+
+  <!-- CHAT AREA -->
+  <div id="chatArea" class="chat-area">
+    <div id="placeholderText" class="placeholder-text">
+      Translation Active.<br>Select language and unmute.
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="footer">
+    <canvas id="vizCanvas" class="viz-canvas" width="400" height="40"></canvas>
+    
+    <div class="controls-row">
+      <!-- Audio Toggle -->
+      <div class="toggle-wrap">
+        <label class="switch">
+          <input type="checkbox" id="ttsToggle" title="Toggle speaker output" checked>
+          <span class="slider"></span>
+        </label>
+        <span>Speaker</span>
+      </div>
+
+      <!-- Mic Button -->
+      <div class="mic-container">
+        <div id="micStatus" class="status-badge status-hidden">Live</div>
+        <button id="micBtn" class="mic-btn" title="Toggle microphone">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="spacer-60"></div> 
+    </div>
+  </div>
+</div>
+
+<script>
+    // --- 1. CONFIGURATION & STATE ---
+    const INSTANCE_ID = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    let USER_NAME = "Anonymous";
+    let CURRENT_ROOM_ID = ""; 
+    
+    const SUPABASE_URL = "https://xscdwdnjujpkczfhqrgu.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzY2R3ZG5qdWpwa2N6Zmhxcmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMzEwNjgsImV4cCI6MjA3NjkwNzA2OH0.xuVAkWA5y1oDW_jC52I8JJXF-ovU-5LIBsY9yXzy6cA";
+    const CARTESIA_KEY = "sk_car_JmdGRhBt1ocwhqmrxy2gaa";
+    const DEEPGRAM_KEY = "52c4137114e2f86597c78326be7b512daae7f266";
+
+    // --- 2. LOCAL STT/TTS SERVER CONFIG ---
+    const LOCAL_STT_URL = "ws://localhost:8001/ws/transcribe";
+    const LOCAL_TTS_URL = "http://localhost:8002/synthesize";
+    let useLocalSTT = true;  // Try local first, fallback to Deepgram
+    let useLocalTTS = true;  // Try local first, fallback to Cartesia
+    let localSTTAvailable = false;
+    let localTTSAvailable = false;
+
+    // Check local server availability on load
+    async function checkLocalServers() {
+        try {
+            const sttRes = await fetch('http://localhost:8001/health', { signal: AbortSignal.timeout(2000) });
+            localSTTAvailable = sttRes.ok;
+            console.log(`Local STT: ${localSTTAvailable ? '✓ Available' : '✗ Unavailable'}`);
+        } catch { localSTTAvailable = false; console.log('Local STT: ✗ Unavailable'); }
+        
+        try {
+            const ttsRes = await fetch('http://localhost:8002/health', { signal: AbortSignal.timeout(2000) });
+            localTTSAvailable = ttsRes.ok;
+            console.log(`Local TTS: ${localTTSAvailable ? '✓ Available' : '✗ Unavailable'}`);
+        } catch { localTTSAvailable = false; console.log('Local TTS: ✗ Unavailable'); }
+    }
+    checkLocalServers();
+
+    // --- DATA: ALL LANGUAGES MAPPED FOR STABILITY ---
+    // 'code': Used for Translation (Google)
+    // 'dg': Used for Speech Recognition (Deepgram Nova-2)
+    // We map unsupported STT dialects to their closest major language (e.g. Medumba -> French)
+    const LANGUAGES = [
+      { name: "Afrikaans", code: "af", dg: "af" },
+      { name: "Albanian", code: "sq", dg: "en" }, // Fallback
+      { name: "Amharic", code: "am", dg: "en" },
+      { name: "Arabic (General)", code: "ar", dg: "ar" },
+      { name: "Arabic (Egypt)", code: "ar", dg: "ar" },
+      { name: "Arabic (UAE)", code: "ar", dg: "ar" },
+      { name: "Armenian", code: "hy", dg: "en" },
+      { name: "Bassa (Cameroon)", code: "fr", dg: "fr" }, // Mapped
+      { name: "Bambara", code: "bm", dg: "fr" },
+      { name: "Basque", code: "eu", dg: "es" },
+      { name: "Bengali", code: "bn", dg: "bn" },
+      { name: "Bulgarian", code: "bg", dg: "bg" },
+      { name: "Catalan", code: "ca", dg: "ca" },
+      { name: "Cebuano (Philippines)", code: "ceb", dg: "tl" }, // Map to Tagalog
+      { name: "Chinese (Mandarin)", code: "zh-CN", dg: "zh-CN" },
+      { name: "Chinese (Taiwan)", code: "zh-TW", dg: "zh-TW" },
+      { name: "Chinese (Cantonese)", code: "zh-yue", dg: "zh-CN" },
+      { name: "Croatian", code: "hr", dg: "en" },
+      { name: "Czech", code: "cs", dg: "cs" },
+      { name: "Danish", code: "da", dg: "da" },
+      { name: "Dutch (Netherlands)", code: "nl", dg: "nl" },
+      { name: "Dutch (Flemish)", code: "nl", dg: "nl" },
+      { name: "English (US)", code: "en", dg: "en" },
+      { name: "English (UK)", code: "en", dg: "en" },
+      { name: "English (Cameroon Pidgin)", code: "en", dg: "en" },
+      { name: "Estonian", code: "et", dg: "et" },
+      { name: "Ewondo (Cameroon)", code: "fr", dg: "fr" }, // Mapped
+      { name: "Filipino (Tagalog)", code: "tl", dg: "tl" },
+      { name: "Finnish", code: "fi", dg: "fi" },
+      { name: "French (France)", code: "fr", dg: "fr" },
+      { name: "French (Canada)", code: "fr", dg: "fr-CA" },
+      { name: "French (Cameroon)", code: "fr", dg: "fr" },
+      { name: "French (Ivory Coast)", code: "fr", dg: "fr" },
+      { name: "French (Senegal)", code: "fr", dg: "fr" },
+      { name: "Fulfulde", code: "ff", dg: "fr" },
+      { name: "Galician", code: "gl", dg: "es" },
+      { name: "German", code: "de", dg: "de" },
+      { name: "Greek", code: "el", dg: "el" },
+      { name: "Gujarati", code: "gu", dg: "hi" },
+      { name: "Hausa", code: "ha", dg: "en" },
+      { name: "Hebrew", code: "he", dg: "en" },
+      { name: "Hindi", code: "hi", dg: "hi" },
+      { name: "Hiligaynon (Philippines)", code: "hil", dg: "tl" },
+      { name: "Hungarian", code: "hu", dg: "hu" },
+      { name: "Icelandic", code: "is", dg: "en" },
+      { name: "Igbo", code: "ig", dg: "en" },
+      { name: "Ilocano (Philippines)", code: "ilo", dg: "tl" },
+      { name: "Indonesian", code: "id", dg: "id" },
+      { name: "Irish", code: "ga", dg: "en" },
+      { name: "Italian", code: "it", dg: "it" },
+      { name: "Japanese", code: "ja", dg: "ja" },
+      { name: "Javanese", code: "jw", dg: "id" },
+      { name: "Kannada", code: "kn", dg: "hi" },
+      { name: "Kazakh", code: "kk", dg: "ru" },
+      { name: "Khmer", code: "km", dg: "en" },
+      { name: "Korean", code: "ko", dg: "ko" },
+      { name: "Lao", code: "lo", dg: "en" },
+      { name: "Latvian", code: "lv", dg: "lv" },
+      { name: "Lithuanian", code: "lt", dg: "lt" },
+      { name: "Macedonian", code: "mk", dg: "mk" },
+      { name: "Malay", code: "ms", dg: "ms" },
+      { name: "Malayalam", code: "ml", dg: "hi" },
+      { name: "Marathi", code: "mr", dg: "hi" },
+      { name: "Medumba (Cameroon)", code: "fr", dg: "fr" }, // MAPPED FOR STABILITY
+      { name: "Mongolian", code: "mn", dg: "en" },
+      { name: "Myanmar (Burmese)", code: "my", dg: "en" },
+      { name: "Nepali", code: "ne", dg: "hi" },
+      { name: "Norwegian", code: "no", dg: "no" },
+      { name: "Pashto", code: "ps", dg: "en" },
+      { name: "Persian", code: "fa", dg: "en" },
+      { name: "Polish", code: "pl", dg: "pl" },
+      { name: "Portuguese (Brazil)", code: "pt", dg: "pt-BR" },
+      { name: "Portuguese (Portugal)", code: "pt", dg: "pt" },
+      { name: "Punjabi", code: "pa", dg: "hi" },
+      { name: "Romanian", code: "ro", dg: "ro" },
+      { name: "Russian", code: "ru", dg: "ru" },
+      { name: "Serbian", code: "sr", dg: "en" },
+      { name: "Slovak", code: "sk", dg: "sk" },
+      { name: "Slovenian", code: "sl", dg: "en" },
+      { name: "Somali", code: "so", dg: "en" },
+      { name: "Spanish (Spain)", code: "es", dg: "es" },
+      { name: "Spanish (Latin America)", code: "es", dg: "es-419" },
+      { name: "Swahili", code: "sw", dg: "en" },
+      { name: "Swedish", code: "sv", dg: "sv" },
+      { name: "Tamil", code: "ta", dg: "ta" },
+      { name: "Telugu", code: "te", dg: "hi" },
+      { name: "Thai", code: "th", dg: "th" },
+      { name: "Turkish", code: "tr", dg: "tr" },
+      { name: "Ukrainian", code: "uk", dg: "uk" },
+      { name: "Urdu", code: "ur", dg: "en" },
+      { name: "Uzbek", code: "uz", dg: "ru" },
+      { name: "Vietnamese", code: "vi", dg: "vi" },
+      { name: "Waray (Philippines)", code: "war", dg: "tl" },
+      { name: "Welsh", code: "cy", dg: "en" },
+      { name: "Xhosa", code: "xh", dg: "en" },
+      { name: "Yoruba", code: "yo", dg: "en" },
+      { name: "Zulu", code: "zu", dg: "en" }
+    ];
+
+    // --- 3. UI REFERENCES & INIT ---
+    const ui = {
+        modal: document.getElementById('welcomeModal'),
+        username: document.getElementById('usernameInput'),
+        classIdInput: document.getElementById('classIdInput'),
+        modalJoinBtn: document.getElementById('modalJoinBtn'),
+        modalCreateBtn: document.getElementById('modalCreateBtn'),
+        tabCreate: document.getElementById('tabCreate'),
+        tabJoin: document.getElementById('tabJoin'),
+        createMode: document.getElementById('createMode'),
+        joinMode: document.getElementById('joinMode'),
+        chat: document.getElementById('chatArea'),
+        placeholder: document.getElementById('placeholderText'),
+        micBtn: document.getElementById('micBtn'),
+        micStatus: document.getElementById('micStatus'),
+        toast: document.getElementById('toast'),
+        copyIdBtn: document.getElementById('copyIdBtn'),
+        shareWa: document.getElementById('shareWa'),
+        shareSms: document.getElementById('shareSms'),
+        shareMail: document.getElementById('shareMail'),
+        shareFb: document.getElementById('shareFb'),
+        srcLang: document.getElementById('srcLang'),
+        tgtLang: document.getElementById('tgtLang'),
+        ttsToggle: document.getElementById('ttsToggle')
+    };
+
+    // --- PERSISTENCE LOGIC ---
+    function loadState() {
+        try {
+            const savedName = localStorage.getItem('orbit_username');
+            const savedRoom = localStorage.getItem('orbit_room_id');
+            const savedSrc = localStorage.getItem('orbit_src_lang_idx');
+            const savedTgt = localStorage.getItem('orbit_tgt_lang_idx');
+            const savedTTS = localStorage.getItem('orbit_tts_enabled');
+
+            if (savedName) ui.username.value = savedName;
+            
+            if (savedRoom) {
+                ui.classIdInput.value = savedRoom;
+                // Auto-switch to Join tab if we have a room
+                ui.tabJoin.click();
+            }
+
+            if (savedSrc !== null) ui.srcLang.value = savedSrc;
+            if (savedTgt !== null) ui.tgtLang.value = savedTgt;
+            if (savedTTS !== null) ui.ttsToggle.checked = (savedTTS === 'true');
+
+        } catch(e) { console.log("State load error", e); }
+    }
+
+    function saveState() {
+        try {
+            if(USER_NAME && USER_NAME !== "Anonymous") localStorage.setItem('orbit_username', USER_NAME);
+            if(CURRENT_ROOM_ID) localStorage.setItem('orbit_room_id', CURRENT_ROOM_ID);
+            
+            localStorage.setItem('orbit_src_lang_idx', ui.srcLang.value);
+            localStorage.setItem('orbit_tgt_lang_idx', ui.tgtLang.value);
+            localStorage.setItem('orbit_tts_enabled', ui.ttsToggle.checked);
+        } catch(e) { console.log("State save error", e); }
+    }
+
+    // Populate Languages (Sorted Alphabetically)
+    function initLangs() {
+        LANGUAGES.sort((a, b) => a.name.localeCompare(b.name));
+        // Store index to easily retrieve full object later
+        const opts = LANGUAGES.map((l, i) => `<option value="${i}">${l.name}</option>`).join('');
+        ui.srcLang.innerHTML = opts;
+        ui.tgtLang.innerHTML = opts;
+        
+        // Default to English
+        const enIndex = LANGUAGES.findIndex(l => l.name === "English (US)");
+        ui.srcLang.value = enIndex !== -1 ? enIndex : 0;
+        ui.tgtLang.value = enIndex !== -1 ? enIndex : 0;
+    }
+    initLangs();
+    // Load state after languages are populated
+    loadState();
+
+    // === MODAL TABS LOGIC ===
+    ui.tabCreate.addEventListener('click', () => {
+        ui.tabCreate.classList.add('active');
+        ui.tabJoin.classList.remove('active');
+        ui.createMode.classList.remove('hidden');
+        ui.joinMode.classList.add('hidden');
+    });
+
+    ui.tabJoin.addEventListener('click', () => {
+        ui.tabJoin.classList.add('active');
+        ui.tabCreate.classList.remove('active');
+        ui.joinMode.classList.remove('hidden');
+        ui.createMode.classList.add('hidden');
+    });
+
+    ui.modalJoinBtn.addEventListener('click', () => {
+        const name = ui.username.value.trim();
+        const enteredId = ui.classIdInput.value.trim().toUpperCase();
+        if(!name) return alert("Please enter your Name");
+        if(!enteredId) return alert("Please enter a Room ID");
+        USER_NAME = name;
+        CURRENT_ROOM_ID = enteredId;
+        saveState(); // Save on join
+        enterSession();
+    });
+
+    ui.modalCreateBtn.addEventListener('click', () => {
+        const name = ui.username.value.trim();
+        if(!name) return alert("Please enter your Name first");
+        USER_NAME = name;
+        CURRENT_ROOM_ID = Math.random().toString(36).substring(2, 8).toUpperCase();
+        saveState(); // Save on create
+        enterSession();
+    });
+
+    function enterSession() {
+        ui.modal.classList.add('hidden');
+        document.getElementById('roomIdDisplay').textContent = CURRENT_ROOM_ID;
+        initSupabase();
+        
+        // Wake Lock to prevent sleeping
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(console.error);
+        }
+    }
+
+    // === SHARE FUNCTIONALITY ===
+    function showToast(msg) {
+        ui.toast.textContent = msg || "Copied to clipboard";
+        ui.toast.classList.add('show');
+        setTimeout(() => ui.toast.classList.remove('show'), 2000);
+    }
+
+    ui.copyIdBtn.addEventListener('click', () => {
+        if(!CURRENT_ROOM_ID) return;
+        navigator.clipboard.writeText(CURRENT_ROOM_ID);
+        showToast("Room ID Copied");
+    });
+    
+    // Social buttons
+    const getShareUrl = () => `Room ID: ${CURRENT_ROOM_ID}`;
+    ui.shareWa.addEventListener('click', () => CURRENT_ROOM_ID && window.open(`https://wa.me/?text=${encodeURIComponent(getShareUrl())}`, '_blank'));
+    ui.shareSms.addEventListener('click', () => CURRENT_ROOM_ID && window.open(`sms:?&body=${encodeURIComponent(getShareUrl())}`, '_blank'));
+    ui.shareMail.addEventListener('click', () => CURRENT_ROOM_ID && window.open(`mailto:?subject=Join Orbit&body=${encodeURIComponent(getShareUrl())}`, '_blank'));
+    ui.shareFb.addEventListener('click', () => {
+        if(!CURRENT_ROOM_ID) return;
+        navigator.clipboard.writeText(getShareUrl());
+        showToast("ID Copied (Paste in Messenger)");
+    });
+
+    // === CHAT UI LOGIC ===
+    
+    // Ghost bubble for interim results
+    let ghostBubble = null;
+    
+    function updateGhost(text) {
+        if(ui.placeholder) ui.placeholder.remove();
+        
+        if (!ghostBubble) {
+            const div = document.createElement('div');
+            div.className = 'msg-item me';
+            div.innerHTML = `
+                <div class="msg-meta"><span class="msg-name">You</span></div>
+                <div class="msg-bubble ghost-bubble">${text}</div>
+            `;
+            ui.chat.appendChild(div);
+            ghostBubble = div.querySelector('.ghost-bubble');
+            ui.chat.scrollTop = ui.chat.scrollHeight;
+        } else {
+            ghostBubble.textContent = text;
+            ui.chat.scrollTop = ui.chat.scrollHeight;
+        }
+    }
+
+    function finalizeGhost(finalText, lang) {
+        if(ghostBubble) {
+            // Remove the ghost row
+            const parent = ghostBubble.closest('.msg-item');
+            parent.remove();
+            ghostBubble = null;
+        }
+        addMessage("You", finalText, lang, true);
+    }
+
+    function addMessage(name, text, langCode, isMe = false) {
+        if(ui.placeholder) ui.placeholder.remove();
+        
+        const div = document.createElement('div');
+        div.className = isMe ? 'msg-item me' : 'msg-item';
+        div.innerHTML = `
+            <div class="msg-meta">
+                <span class="msg-name">${isMe ? 'You' : name}</span>
+                <span style="opacity:0.5; font-size:9px;">${langCode.toUpperCase()}</span>
+            </div>
+            <div class="msg-bubble">${text}</div>
+        `;
+        ui.chat.appendChild(div);
+        ui.chat.scrollTop = ui.chat.scrollHeight;
+    }
+</script>
+
+<script type="module">
+// --- 4. SUPABASE MESH NETWORK ---
+let supabase = null;
+let channel = null;
+
+window.initSupabase = async function() {
+    if(!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    if(channel) supabase.removeChannel(channel);
+
+    channel = supabase.channel(`room:${CURRENT_ROOM_ID}`);
+    
+    channel.on('broadcast', { event: 'speech' }, async (payload) => {
+        const data = payload.payload;
+        
+        if (data.sender_id === INSTANCE_ID) return;
+
+        // Get index from select
+        const myTargetIdx = document.getElementById('tgtLang').value;
+        const myTargetLangObj = LANGUAGES[myTargetIdx];
+        const myTargetCode = myTargetLangObj ? myTargetLangObj.code : 'en';
+
+        const sourceText = data.text;
+        
+        let finalText = sourceText;
+        
+        // Translate if languages differ
+        // Note: data.lang contains the Translation Code (e.g. 'fr' or 'byv')
+        if (data.lang !== myTargetCode) {
+             finalText = await window.translateText(sourceText, myTargetCode);
+        }
+
+        window.addMessage(data.name, finalText, data.lang);
+
+        if (document.getElementById('ttsToggle').checked) {
+            window.enqueueTTS(finalText);
+        }
+
+    }).subscribe();
+
+    await supabase.auth.signInAnonymously();
+    
+    // START BACKGROUND KEEP-ALIVE
+    // Playing silent audio forces the browser to treat this as an active media tab
+    enableBackgroundMode();
+};
+
+// --- SILENT AUDIO FOR BACKGROUND PERSISTENCE ---
+function enableBackgroundMode() {
+    // 1. Wake Lock (already tried in enterSession, but good to retry)
+    if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').catch(() => {});
+    }
+
+    // 2. Play silent audio loop
+    const silenceCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = silenceCtx.createOscillator();
+    const gainNode = silenceCtx.createGain();
+    
+    // Connect to simple gain (volume 0.0001 - just enough to count as output)
+    gainNode.gain.value = 0.0001; 
+    oscillator.connect(gainNode);
+    gainNode.connect(silenceCtx.destination);
+    
+    oscillator.start();
+    console.log("Background Keep-Alive Active (Silent Oscillator)");
+    
+    // 3. Resume AudioContext on visibility change (fixes some Safari logic)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        }
+    });
+}
+
+window.broadcastSpeech = async function(text, langCode) {
+    if(!channel) return;
+    
+    await channel.send({
+        type: 'broadcast',
+        event: 'speech',
+        payload: {
+            sender_id: INSTANCE_ID,
+            name: USER_NAME,
+            text: text,
+            lang: langCode // Sending the TRANSLATION code (e.g. 'byv' or 'fr')
+        }
+    });
+};
+</script>
+
+<script>
+// --- 5. SERVICES & UTILS ---
+
+window.translateText = async function(text, targetCode) {
+    // Retry logic for robustness
+    const fetchTranslation = async (retryCount = 0) => {
+        // Robustness: Handle non-standard codes by falling back to base
+        let safeCode = targetCode;
+        if(safeCode === 'byv') safeCode = 'fr'; // Medumba -> French fallback for Google
+
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${safeCode}&dt=t&q=${encodeURIComponent(text)}`;
+        try {
+            const r = await fetch(url);
+            if(!r.ok) throw new Error("Translation failed");
+            const d = await r.json();
+            return d[0].map(x => x[0]).join("");
+        } catch (err) { 
+            if(retryCount < 2) {
+                await new Promise(res => setTimeout(res, 500));
+                return fetchTranslation(retryCount + 1);
+            }
+            return text; // Fallback to original
+        }
+    };
+    return fetchTranslation();
+};
+
+const ttsAudio = document.getElementById("tts");
+let ttsQueue = [];
+let isPlaying = false;
+
+window.enqueueTTS = async function(text) {
+    // Get target language for local TTS
+    const myTargetIdx = document.getElementById('tgtLang').value;
+    const myTargetLangObj = LANGUAGES[myTargetIdx];
+    const targetCode = myTargetLangObj ? myTargetLangObj.code : 'en';
+    
+    // Try local TTS first (Chatterbox/Kokoro)
+    if (useLocalTTS && localTTSAvailable) {
+        try {
+            const res = await fetch(LOCAL_TTS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    text: text,
+                    engine: "auto",
+                    language: targetCode,
+                    voice: "af_heart",
+                    speed: 1.0
+                })
+            });
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                ttsQueue.push(url);
+                processQueue();
+                return;
+            }
+        } catch(e) {
+            console.warn("Local TTS failed, falling back to Cartesia:", e);
+        }
+    }
+    
+    // Fallback to Cartesia cloud
+    try {
+        const res = await fetch("https://api.cartesia.ai/tts/bytes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-API-Key": CARTESIA_KEY, "Cartesia-Version": "2025-04-16" },
+            body: JSON.stringify({
+                model_id: "sonic-3-latest", transcript: text,
+                voice: { mode: "id", id: "9c7e6604-52c6-424a-9f9f-2c4ad89f3bb9" },
+                output_format: { container: "wav", encoding: "pcm_f32le", sample_rate: 44100 }
+            })
+        });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        ttsQueue.push(url);
+        processQueue();
+    } catch(e) { console.error("TTS Error", e); }
+};
+
+function processQueue() {
+    if(isPlaying || ttsQueue.length === 0) return;
+    isPlaying = true;
+    ttsAudio.src = ttsQueue.shift();
+    ttsAudio.play();
+    ttsAudio.onended = () => { isPlaying = false; processQueue(); };
+}
+
+// --- 6. AUDIO & DEEPGRAM ---
+let dgSocket;
+let mediaRecorder;
+let isMicOn = false;
+let audioStream = null;
+
+const canvas = document.getElementById('vizCanvas');
+const ctx = canvas.getContext('2d');
+let audioCtx, analyser;
+
+function drawSilence() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#333";
+    ctx.fillRect(0, 19, canvas.width, 2);
+}
+drawSilence();
+
+function visualize(stream) {
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Resume context if suspended (common browser policy)
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    
+    if(analyser) {
+        // cleanup old connections if restarting
+    }
+    
+    analyser = audioCtx.createAnalyser();
+    const src = audioCtx.createMediaStreamSource(stream);
+    src.connect(analyser);
+    analyser.fftSize = 64;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    function draw() {
+        if(!isMicOn) { drawSilence(); return; }
+        requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const barWidth = (canvas.width / bufferLength) * 2;
+        let x = 0;
+        for(let i = 0; i < bufferLength; i++) {
+            const barHeight = (dataArray[i] / 255) * canvas.height;
+            ctx.fillStyle = `rgba(255, 255, 255, ${barHeight/40 + 0.2})`; 
+            ctx.fillRect(x, (canvas.height - barHeight)/2, barWidth, barHeight);
+            x += barWidth + 1;
+        }
+    }
+    draw();
+}
+
+async function startSTTSocket(langIndex) {
+    if(dgSocket) dgSocket.close();
+
+    // Get the Robust Mapping
+    const langObj = LANGUAGES[langIndex];
+    const dgCode = langObj ? langObj.dg : 'en'; // The code STT understands
+    const transCode = langObj ? langObj.code : 'en'; // The code for translation
+
+    let url;
+    let isLocal = false;
+    
+    // Try local STT first (faster-whisper)
+    if (useLocalSTT && localSTTAvailable) {
+        url = `${LOCAL_STT_URL}?language=${dgCode}`;
+        isLocal = true;
+        console.log("Using local STT (faster-whisper)");
+    } else {
+        // Fallback to Deepgram cloud
+        url = `wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true&punctuate=true&language=${dgCode}`;
+        console.log("Using cloud STT (Deepgram)");
+    }
+    
+    // Create WebSocket
+    if (isLocal) {
+        dgSocket = new WebSocket(url);
+    } else {
+        dgSocket = new WebSocket(url, ['token', DEEPGRAM_KEY]);
+    }
+
+    dgSocket.onopen = () => {
+        if(mediaRecorder && mediaRecorder.state !== 'recording') {
+            mediaRecorder.start(250);
+        }
+        ui.micStatus.textContent = isLocal ? "Local" : "Live";
+        ui.micStatus.style.color = isLocal ? "#27AE60" : "#EB5757";
+        ui.micStatus.classList.remove('status-hidden');
+    };
+
+    dgSocket.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+        
+        // Handle both local and Deepgram formats
+        let transcript = "";
+        let isFinal = false;
+        
+        if (data.channel?.alternatives?.[0]) {
+            transcript = data.channel.alternatives[0].transcript?.trim() || "";
+            isFinal = data.is_final;
+        } else if (data.type === "Results") {
+            transcript = data.channel?.alternatives?.[0]?.transcript?.trim() || "";
+            isFinal = data.is_final ?? true;
+        }
+        
+        if (!transcript) return;
+
+        if (isFinal) {
+            finalizeGhost(transcript, transCode);
+            window.broadcastSpeech(transcript, transCode);
+        } else {
+            updateGhost(transcript);
+        }
+    };
+    
+    dgSocket.onerror = (err) => {
+        console.error("STT WebSocket error:", err);
+        if (isLocal) {
+            console.log("Local STT failed, falling back to Deepgram...");
+            localSTTAvailable = false;
+            startSTTSocket(langIndex);
+        }
+    };
+    
+    dgSocket.onclose = () => {
+        if(isMicOn) {
+            console.log("Socket closed, reconnecting...");
+            setTimeout(() => { if(isMicOn) startSTTSocket(langIndex); }, 1000);
+        }
+    };
+}
+
+// Alias for backward compatibility
+const startDeepgramSocket = startSTTSocket;
+
+// Handle Language Change dynamically
+ui.srcLang.addEventListener('change', () => {
+    saveState();
+    if(isMicOn) {
+        // Restart socket with new language
+        startDeepgramSocket(ui.srcLang.value);
+    }
+});
+
+ui.tgtLang.addEventListener('change', saveState);
+ui.ttsToggle.addEventListener('change', saveState);
+
+async function toggleMic() {
+    if(isMicOn) {
+        // STOP
+        isMicOn = false;
+        ui.micBtn.classList.remove('active');
+        ui.micStatus.classList.add('status-hidden');
+        
+        if(mediaRecorder) mediaRecorder.stop();
+        if(dgSocket) dgSocket.close(); // This triggers onclose, but isMicOn is false, so no reconnect
+        
+        if(audioStream) audioStream.getTracks().forEach(track => track.stop());
+        drawSilence();
+        return;
+    }
+
+    // START
+    try {
+        ui.micStatus.textContent = "Init...";
+        ui.micStatus.style.opacity = 1;
+        ui.micStatus.style.color = "#888";
+
+        const constraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
+        audioStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        isMicOn = true;
+        ui.micBtn.classList.add('active');
+        
+        visualize(audioStream);
+
+        // Determine supported mime type (Robustness for Safari vs Chrome)
+        let mimeType = 'audio/webm';
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            mimeType = 'audio/mp4'; // Safari fallback
+        }
+
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+        
+        mediaRecorder.addEventListener('dataavailable', e => {
+            if(e.data.size > 0 && dgSocket && dgSocket.readyState === 1) {
+                dgSocket.send(e.data);
+            }
+        });
+
+        startDeepgramSocket(ui.srcLang.value);
+
+    } catch(e) {
+        console.error(e);
+        isMicOn = false;
+        ui.micBtn.classList.remove('active');
+        ui.micStatus.style.opacity = 0;
+        alert("Could not access microphone. Please check permissions.");
+    }
+}
+
+ui.micBtn.addEventListener('click', toggleMic);
+</script>
+</body>
+</html>

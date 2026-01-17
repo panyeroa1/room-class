@@ -1,0 +1,1738 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Orbit Sidebar - Global Edition</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/client@0.10.0/dist/index.min.js"></script>
+  <script src="jw_languages.js"></script>
+  
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-body: #050505;
+      --bg-surface: #111111;
+      --bg-chat-bubble: #1a1a1a;
+      --text-primary: #ffffff;
+      --text-secondary: #888888;
+      --status-live: #EB5757; 
+      --status-active: #27AE60;
+      --accent: #fff;
+      --font: "Inter", -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      background: var(--bg-body);
+      color: var(--text-primary);
+      font-family: var(--font);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* === UTILITY MODAL === */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: #000;
+      z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease;
+    }
+    .modal-overlay.hidden { opacity: 0; pointer-events: none; }
+    
+    .modal-card {
+      width: 100%; max-width: 320px;
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    .modal-header { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #666; margin-bottom: 8px; }
+
+    /* Modal Tabs */
+    .mode-tabs { display: flex; background: #1a1a1a; padding: 4px; border-radius: 8px; margin-bottom: 12px; }
+    .mode-tab { 
+      flex: 1; border: none; background: transparent; color: #666; 
+      padding: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 6px; transition: 0.2s; 
+    }
+    .mode-tab.active { background: #333; color: white; }
+
+    .modal-input {
+      width: 100%; padding: 12px;
+      background: #111; border: 1px solid #333; color: white;
+      border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s;
+    }
+    .modal-input:focus { border-color: #666; }
+    
+    .btn-action {
+      width: 100%; padding: 14px;
+      background: white; color: black;
+      border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-action:active { transform: scale(0.98); }
+
+    /* === MAIN APP === */
+    .app-container {
+      width: 100%; max-width: 500px; height: 100%;
+      display: flex; flex-direction: column;
+      position: relative;
+      background: var(--bg-body);
+    }
+
+    @media (min-width: 501px) {
+      .app-container { height: 95vh; border-radius: 16px; border: 1px solid #222; background: var(--bg-surface); overflow: hidden; }
+    }
+
+    /* === HEADER & SHARE ICONS === */
+    .header {
+      padding: 12px 16px; z-index: 20;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(17,17,17,0.9);
+      border-bottom: 1px solid #222;
+    }
+    
+    .room-info { display: flex; flex-direction: column; }
+    .room-label { font-size: 9px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+    .room-id { font-family: monospace; font-size: 16px; font-weight: 600; color: white; letter-spacing: 1px;}
+    
+    /* Share Actions Row */
+    .share-row { display: flex; gap: 6px; align-items: center; }
+    
+    .share-btn {
+      width: 28px; height: 28px; border-radius: 6px; border: none;
+      background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s ease; position: relative;
+    }
+    .share-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+    .share-btn:active { transform: scale(0.95); }
+    .share-icon { width: 14px; height: 14px; fill: #aaa; transition: fill 0.2s; }
+    .btn-copy:hover .share-icon { fill: #fff; }
+    .btn-wa:hover .share-icon { fill: #25D366; }
+    .btn-sms:hover .share-icon { fill: #34B7F1; }
+    .btn-mail:hover .share-icon { fill: #EA4335; }
+    .btn-fb:hover .share-icon { fill: #0084FF; }
+
+    /* === SETTINGS BAR === */
+    .settings-bar {
+      padding: 10px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      border-bottom: 1px solid #222; background: var(--bg-surface);
+    }
+    .setting-group label { display: block; font-size: 9px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600; }
+    select {
+      width: 100%; background: transparent; color: white; border: none;
+      font-size: 12px; font-family: var(--font); cursor: pointer;
+      border-bottom: 1px solid #333; padding-bottom: 4px;
+    }
+    select option { background: #111; color: white; }
+
+    /* === TRANSCRIPT AREA === */
+    .chat-area {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%);
+      mask-image: linear-gradient(to bottom, transparent 0%, black 5%);
+      scroll-behavior: smooth;
+    }
+
+    .msg-item { animation: slideIn 0.3s ease; display: flex; flex-direction: column; gap: 4px; }
+    .msg-meta { font-size: 10px; color: var(--text-secondary); display: flex; flex-direction: column; padding: 0 2px; line-height: 1.2; }
+    .msg-name { font-weight: 600; color: #fff; }
+    
+    .msg-bubble {
+      display: flex; flex-direction: column; gap: 6px;
+      word-wrap: break-word;
+    }
+    
+    .msg-text-box {
+      background: var(--bg-chat-bubble); padding: 10px 14px; border-radius: 4px 14px 14px 14px;
+      font-size: 13px; line-height: 1.4; color: #eee; border: 1px solid #2a2a2a;
+    }
+    
+    .msg-trans-box {
+      font-size: 13px; font-weight: 500;
+      color: #32CD32; /* LimeGreen */
+      background: rgba(50, 205, 50, 0.05);
+      padding: 10px 14px; border-radius: 4px 14px 14px 14px;
+      border: 1px solid rgba(50, 205, 50, 0.3);
+    }
+    
+    .msg-item.me .msg-bubble { align-items: flex-end; }
+    .msg-item.me .msg-text-box { background: #222; border-radius: 14px 4px 14px 14px; border-color: #333; text-align: right; }
+    .msg-item.me .msg-trans-box { border-radius: 14px 4px 14px 14px; color: #A4FFB4; border: 1px solid rgba(164, 255, 180, 0.3); text-align: right; }
+    
+    #recvLogHeader { color: #32CD32 !important; }
+    #recvLogHeader small {
+        font-size: 8px;
+        opacity: 0.5;
+        vertical-align: top;
+        margin-right: 4px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .status-text { opacity: 0.6; }
+    .log-header span:last-child { font-weight: 500; }
+    
+    /* Dual Log Layout */
+    .logs-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-body);
+    }
+    .log-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-bottom: 1px solid #222;
+    }
+    .log-pane:last-child { border-bottom: none; }
+    .log-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: #555;
+      padding: 8px 16px;
+      background: #0a0a0a;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .log-content {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .log-content::-webkit-scrollbar { width: 4px; }
+    .log-content::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    
+    .msg-item.me { align-items: flex-end; opacity: 1; }
+    .msg-item.me .msg-bubble { background: #222; border-radius: 14px 4px 14px 14px; border-color: #333; text-align: right; }
+    .msg-item.me .msg-translation { color: #A4FFB4; border-top: 1px dashed rgba(255,255,255,0.2); }
+    
+    .ghost {
+        opacity: 0.5;
+        font-style: italic;
+        transition: opacity 0.2s;
+    }
+    .ghost::before { content: ' '; }
+
+    .msg-trg-label {
+        font-size: 8px;
+        color: rgba(255, 255, 255, 0.4);
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    /* === FOOTER CONTROLS === */
+    .footer {
+      padding: 16px; background: linear-gradient(to top, var(--bg-body) 20%, transparent);
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+
+    .viz-canvas { width: 100%; height: 30px; opacity: 0.5; }
+
+    .controls-row { display: flex; align-items: center; gap: 20px; width: 100%; justify-content: center; }
+
+    .mic-btn {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: #111; border: 1px solid #333; color: white;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s; position: relative;
+    }
+    .mic-btn:hover { background: #222; transform: scale(1.05); }
+    .mic-btn.active { background: var(--status-live); border-color: var(--status-live); box-shadow: 0 0 20px rgba(235, 87, 87, 0.3); }
+
+    .status-badge {
+      position: absolute; top: -25px; 
+      background: #222; padding: 2px 8px; border-radius: 10px;
+      font-size: 9px; font-weight: 600; color: #888;
+      border: 1px solid #333; transition: opacity 0.3s;
+    }
+
+    .toggle-wrap { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #888; cursor: pointer; }
+    .switch { position: relative; display: inline-block; width: 30px; height: 18px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background-color: #333; border-radius: 34px; transition: .3s; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: .3s; }
+    input:checked + .slider { background-color: var(--status-active); }
+    input:checked + .slider:before { transform: translateX(12px); }
+
+    .toast {
+      position: absolute; top: 60px; left: 50%; transform: translateX(-50%) translateY(-20px);
+      background: white; color: black; padding: 6px 16px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 9999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .hidden { display: none !important; }
+
+    /* === HELPER CLASSES === */
+    .modal-hint { font-size: 11px; color: #555; margin-bottom: 10px; }
+    .input-spaced { margin-bottom: 10px; }
+    .placeholder-text { text-align: center; margin-top: 40px; color: #333; font-size: 12px; font-style: italic; }
+    .mic-container { position: relative; display: flex; justify-content: center; }
+    .status-hidden { opacity: 0; }
+    .spacer-60 { width: 60px; }
+
+    /* === TRAINING STATUS === */
+    .training-status {
+      padding: 10px 16px; background: #151515; border-bottom: 1px solid #222;
+    }
+    .training-label {
+      font-size: 9px; color: #EB5757; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .training-label::before {
+      content: ''; display: inline-block; width: 6px; height: 6px; background: #EB5757; border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    .training-list {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      max-height: 40px; overflow-y: auto;
+      padding-right: 4px;
+    }
+    .training-list::-webkit-scrollbar { width: 3px; }
+    .training-list::-webkit-scrollbar-thumb { background: #333; }
+    .training-list span {
+      font-size: 10px; color: #888; background: #222; padding: 2px 6px; border-radius: 4px; border: 1px solid #333;
+    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+  </style>
+</head>
+
+<body>
+
+<!-- 1. COMPACT UTILITY MODAL -->
+<div id="welcomeModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">Session Setup</div>
+    <input type="text" id="usernameInput" class="modal-input" placeholder="Your Name" maxlength="15">
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabCreate">Create</button>
+      <button class="mode-tab" id="tabJoin">Join</button>
+    </div>
+    <div id="createMode" class="mode-content">
+      <div class="modal-hint">Start a new session and get a Room ID.</div>
+      <button id="modalCreateBtn" class="btn-action">Start Session</button>
+    </div>
+    <div id="joinMode" class="mode-content hidden">
+      <input type="text" id="classIdInput" class="modal-input input-spaced" placeholder="Room ID (e.g. A1B2C3)" maxlength="6">
+      <button id="modalJoinBtn" class="btn-action">Connect</button>
+    </div>
+  </div>
+</div>
+
+<audio id="tts" autoplay></audio>
+<div id="toast" class="toast">Link copied to clipboard</div>
+
+<div class="app-container">
+  
+  <!-- HEADER -->
+  <div class="header">
+    <div class="room-info">
+      <span class="room-label">Room ID</span>
+      <span id="roomIdDisplay" class="room-id">...</span>
+    </div>
+    
+    <!-- SOCIAL SHARE ICONS -->
+    <div class="share-row">
+      <button class="share-btn btn-wa" id="shareWa" title="WhatsApp"><svg class="share-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></button>
+      <button class="share-btn btn-sms" id="shareSms" title="SMS"><svg class="share-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/></svg></button>
+      <button class="share-btn btn-mail" id="shareMail" title="Email"><svg class="share-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></button>
+      <button class="share-btn btn-fb" id="shareFb" title="Messenger"><svg class="share-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.43 3.82 7.03V22l3.37-1.85c.87.24 1.8.38 2.81.38 5.52 0 10-4.03 10-9s-4.48-9-10-9zm1.2 13l-2.43-2.6-4.75 2.6 5.22-5.55 2.43 2.6 4.75-2.6-5.22 5.55z"/></svg></button>
+      <button class="share-btn btn-copy" id="copyIdBtn" title="Copy to Clipboard"><svg class="share-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="settings-bar">
+    <div class="setting-group">
+      <label for="srcLang">I SPEAK</label>
+      <select id="srcLang" title="Select your spoken language"></select>
+    </div>
+    
+    <!-- STT PROVIDER SELECTOR -->
+    <div class="setting-group">
+      <label for="sttProvider">STT ENGINE</label>
+      <select id="sttProvider" title="Select Speech-to-Text Provider">
+        <option value="deepgram">Deepgram (Cloud)</option>
+        <option value="local">Local (Faster-Whisper)</option>
+        <option value="insanely-fast">Local (Insanely-Fast)</option>
+        <option value="nemotron">Nemotron (NVIDIA/HF)</option>
+        <option value="gemini">Gemini Native (Multimodal)</option>
+      </select>
+    </div>
+
+    <!-- TTS PROVIDER SELECTOR -->
+    <div class="setting-group">
+      <label for="ttsProvider">TTS ENGINE</label>
+      <select id="ttsProvider" title="Select Text-to-Speech Engine">
+        <option value="cartesia">Cartesia (Sonic)</option>
+        <option value="kokoro">Local: Kokoro (High Quality)</option>
+        <option value="supertonic">Local: Supertonic (Fast)</option>
+        <option value="chatterbox">Local: Chatterbox (Cloning)</option>
+        <option value="piper">Local: Piper (Fast Neural)</option>
+        <option value="gemini">Gemini Native (Live)</option>
+      </select>
+    </div>
+
+    <!-- LLM PROVIDER SELECTOR (for refinement) -->
+    <div class="setting-group">
+      <label for="llmProvider">LLM ENGINE</label>
+      <select id="llmProvider" title="Select LLM for text refinement">
+        <option value="ollama-local">Ollama Local (gemma3:4b)</option>
+        <option value="ollama-cloud" selected>Ollama Cloud (Gemini-3 Pro)</option>
+        <option value="gemini">Gemini API (2.0 Flash Lite)</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <label for="tgtLang">I LISTEN</label>
+      <select id="tgtLang" title="Select your listening language"></select>
+    </div>
+  </div>
+
+  <!-- TRAINING STATUS (User Request) -->
+  <div class="training-status">
+    <div class="training-label">TRAINING IN PROGRESS (Regional)</div>
+    <div class="training-list">
+      <span>🇧🇪 Dutch (Flemish)</span>
+      <span>🇫🇷 French (Regional)</span>
+      <span>🇵🇭 Philippines (Tagalog/Cebuano)</span>
+      <span>🇨🇲 Cameroon (Bassa/Pidgin)</span>
+      <span>🇨🇮 Ivory Coast (Baoule)</span>
+    </div>
+  </div>
+
+  <!-- CHAT AREA -->
+  <div class="logs-container">
+    <div class="log-pane">
+      <div class="log-title">
+        <span>Transcription</span>
+        <span id="transStatus" class="status-live-dot">READY</span>
+      </div>
+      <div id="transLog" class="log-content">
+        <div class="placeholder-text">Transcription will appear here...</div>
+      </div>
+    </div>
+    <div class="log-pane">
+      <div class="log-header" id="recvLogHeader">
+        <span><small>TRG</small></span>
+        <span id="transMode" class="status-text">ACTIVE</span>
+      </div>
+      <div id="recvLog" class="log-content">
+        <div id="placeholderText" class="placeholder-text">
+          Translation Active.<br>Select language and unmute.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="footer">
+    <canvas id="vizCanvas" class="viz-canvas" width="400" height="40"></canvas>
+    
+    <div class="controls-row">
+      <!-- Audio Toggle -->
+      <div class="toggle-wrap">
+        <label class="switch">
+          <input type="checkbox" id="ttsToggle" title="Toggle speaker output" checked>
+          <span class="slider"></span>
+        </label>
+        <span>Speaker</span>
+      </div>
+
+      <div class="toggle-wrap">
+        <label class="switch">
+          <input type="checkbox" id="autoplayOwnToggle" title="Toggle autoplay for your own voice">
+          <span class="slider"></span>
+        </label>
+        <span>Autoplay Own</span>
+      </div>
+
+      <!-- Mic Button -->
+      <div class="mic-container">
+        <div id="micStatus" class="status-badge status-hidden">Live</div>
+        <button id="micBtn" class="mic-btn" title="Toggle microphone">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="spacer-60"></div> 
+    </div>
+  </div>
+</div>
+
+<script>
+    // --- 1. CONFIGURATION & STATE ---
+    const INSTANCE_ID = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    let USER_NAME = "Anonymous";
+    let CURRENT_ROOM_ID = ""; 
+    
+    const SUPABASE_URL = "https://xscdwdnjujpkczfhqrgu.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzY2R3ZG5qdWpwa2N6Zmhxcmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMzEwNjgsImV4cCI6MjA3NjkwNzA2OH0.xuVAkWA5y1oDW_jC52I8JJXF-ovU-5LIBsY9yXzy6cA";
+    const CARTESIA_KEY = "sk_car_JmdGRhBt1ocwhqmrxy2gaa";
+    const DEEPGRAM_KEY = "52c4137114e2f86597c78326be7b512daae7f266";
+    const GEMINI_API_KEY = "AIzaSyCCHIEeapZHMoNTJYgH6nhwTCbnL2It72M";
+    const OLLAMA_CLOUD_KEY = "bb6c7c2aedb54d0bb8f9225df2d7566c.d4wikUADHXuuh7w4gxHuyFdX";
+
+    // --- DATA: ALL LANGUAGES MAPPED FOR STABILITY ---
+    // 'code': Used for Translation (Google)
+    // 'dg': Used for Speech Recognition (Deepgram Nova-2)
+    // We map unsupported STT dialects to their closest major language (e.g. Medumba -> French)
+    const LANGUAGES = [
+      { name: "Abkhaz", code: "ab", dg: "en" },
+      { name: "Acehnese", code: "ace", dg: "en" },
+      { name: "Acholi", code: "ach", dg: "en" },
+      { name: "Afar", code: "aa", dg: "en" },
+      { name: "Afrikaans", code: "af", dg: "af" },
+      { name: "Albanian", code: "sq", dg: "sq" },
+      { name: "Alur", code: "alz", dg: "en" },
+      { name: "Amharic", code: "am", dg: "am" },
+      { name: "Arabic", code: "ar", dg: "ar" },
+      { name: "Armenian", code: "hy", dg: "hy" },
+      { name: "Assamese", code: "as", dg: "as" },
+      { name: "Avar", code: "av", dg: "en" },
+      { name: "Awadhi", code: "awa", dg: "hi" },
+      { name: "Aymara", code: "ay", dg: "en" },
+      { name: "Azerbaijani", code: "az", dg: "az" },
+      { name: "Balinese", code: "ban", dg: "en" },
+      { name: "Baluchi", code: "bal", dg: "en" },
+      { name: "Bambara", code: "bm", dg: "en" },
+      { name: "Baoulé", code: "bci", dg: "en" },
+      { name: "Bashkir", code: "ba", dg: "en" },
+      { name: "Basque", code: "eu", dg: "eu" },
+      { name: "Batak Karo", code: "btx", dg: "en" },
+      { name: "Batak Simalungun", code: "bts", dg: "en" },
+      { name: "Batak Toba", code: "bbc", dg: "en" },
+      { name: "Belarusian", code: "be", dg: "be" },
+      { name: "Bemba", code: "bem", dg: "en" },
+      { name: "Bengali", code: "bn", dg: "bn" },
+      { name: "Betawi", code: "bew", dg: "en" },
+      { name: "Bhojpuri", code: "bho", dg: "hi" },
+      { name: "Bikol", code: "bik", dg: "en" },
+      { name: "Bosnian", code: "bs", dg: "bs" },
+      { name: "Breton", code: "br", dg: "en" },
+      { name: "Bulgarian", code: "bg", dg: "bg" },
+      { name: "Buryat", code: "bua", dg: "en" },
+      { name: "Cantonese", code: "yue", dg: "zh-HK" },
+      { name: "Catalan", code: "ca", dg: "ca" },
+      { name: "Cebuano", code: "ceb", dg: "en" },
+      { name: "Chamorro", code: "ch", dg: "en" },
+      { name: "Chechen", code: "ce", dg: "en" },
+      { name: "Chichewa", code: "ny", dg: "en" },
+      { name: "Chinese (Simplified)", code: "zh-CN", dg: "zh-CN" },
+      { name: "Chinese (Traditional)", code: "zh-TW", dg: "zh-TW" },
+      { name: "Chuukese", code: "chk", dg: "en" },
+      { name: "Chuvash", code: "cv", dg: "en" },
+      { name: "Corsican", code: "co", dg: "en" },
+      { name: "Crimean Tatar (Cyrillic)", code: "crh", dg: "en" },
+      { name: "Crimean Tatar (Latin)", code: "crh-Latn", dg: "en" },
+      { name: "Croatian", code: "hr", dg: "hr" },
+      { name: "Czech", code: "cs", dg: "cs" },
+      { name: "Danish", code: "da", dg: "da" },
+      { name: "Dari", code: "fa-AF", dg: "fa" },
+      { name: "Dhivehi", code: "dv", dg: "en" },
+      { name: "Dinka", code: "din", dg: "en" },
+      { name: "Dogri", code: "doi", dg: "en" },
+      { name: "Dombe", code: "dov", dg: "en" },
+      { name: "Dutch", code: "nl", dg: "nl" },
+      { name: "Dyula", code: "dyu", dg: "en" },
+      { name: "Dzongkha", code: "dz", dg: "en" },
+      { name: "English", code: "en", dg: "en" },
+      { name: "Esperanto", code: "eo", dg: "en" },
+      { name: "Estonian", code: "et", dg: "et" },
+      { name: "Ewe", code: "ee", dg: "en" },
+      { name: "Faroese", code: "fo", dg: "en" },
+      { name: "Fijian", code: "fj", dg: "en" },
+      { name: "Filipino", code: "tl", dg: "tl" },
+      { name: "Finnish", code: "fi", dg: "fi" },
+      { name: "Fon", code: "fon", dg: "en" },
+      { name: "French", code: "fr", dg: "fr" },
+      { name: "French (Canada)", code: "fr-CA", dg: "fr" },
+      { name: "Frisian", code: "fy", dg: "en" },
+      { name: "Friulian", code: "fur", dg: "en" },
+      { name: "Fulani", code: "ff", dg: "en" },
+      { name: "Ga", code: "gaa", dg: "en" },
+      { name: "Galician", code: "gl", dg: "gl" },
+      { name: "Georgian", code: "ka", dg: "ka" },
+      { name: "German", code: "de", dg: "de" },
+      { name: "Greek", code: "el", dg: "el" },
+      { name: "Guarani", code: "gn", dg: "en" },
+      { name: "Gujarati", code: "gu", dg: "gu" },
+      { name: "Haitian Creole", code: "ht", dg: "ht" },
+      { name: "Hakha Chin", code: "cnh", dg: "en" },
+      { name: "Hausa", code: "ha", dg: "ha" },
+      { name: "Hawaiian", code: "haw", dg: "en" },
+      { name: "Hebrew", code: "iw", dg: "he" },
+      { name: "Hiligaynon", code: "hil", dg: "en" },
+      { name: "Hindi", code: "hi", dg: "hi" },
+      { name: "Hmong", code: "hmn", dg: "en" },
+      { name: "Hungarian", code: "hu", dg: "hu" },
+      { name: "Hunsrik", code: "hrx", dg: "en" },
+      { name: "Iban", code: "iba", dg: "en" },
+      { name: "Icelandic", code: "is", dg: "is" },
+      { name: "Igbo", code: "ig", dg: "ig" },
+      { name: "Ilocano", code: "ilo", dg: "en" },
+      { name: "Indonesian", code: "id", dg: "id" },
+      { name: "Inuktut (Latin)", code: "iu-Latn", dg: "en" },
+      { name: "Inuktut (Syllabics)", code: "iu", dg: "en" },
+      { name: "Irish", code: "ga", dg: "ga" },
+      { name: "Italian", code: "it", dg: "it" },
+      { name: "Jamaican Patois", code: "jam", dg: "en" },
+      { name: "Japanese", code: "ja", dg: "ja" },
+      { name: "Javanese", code: "jw", dg: "jw" },
+      { name: "Jingpo", code: "kac", dg: "en" },
+      { name: "Kalaallisut", code: "kl", dg: "en" },
+      { name: "Kannada", code: "kn", dg: "kn" },
+      { name: "Kanuri", code: "kr", dg: "en" },
+      { name: "Kapampangan", code: "pam", dg: "en" },
+      { name: "Kazakh", code: "kk", dg: "kk" },
+      { name: "Khasi", code: "kha", dg: "en" },
+      { name: "Khmer", code: "km", dg: "km" },
+      { name: "Kiga", code: "cgg", dg: "en" },
+      { name: "Kikongo", code: "kg", dg: "en" },
+      { name: "Kinyarwanda", code: "rw", dg: "rw" },
+      { name: "Kituba", code: "ktu", dg: "en" },
+      { name: "Kokborok", code: "trp", dg: "en" },
+      { name: "Komi", code: "kv", dg: "en" },
+      { name: "Konkani", code: "gom", dg: "en" },
+      { name: "Korean", code: "ko", dg: "ko" },
+      { name: "Krio", code: "kri", dg: "en" },
+      { name: "Kurdish (Kurmanji)", code: "ku", dg: "ku" },
+      { name: "Kurdish (Sorani)", code: "ckb", dg: "ckb" },
+      { name: "Kyrgyz", code: "ky", dg: "ky" },
+      { name: "Lao", code: "lo", dg: "lo" },
+      { name: "Latgalian", code: "ltg", dg: "en" },
+      { name: "Latin", code: "la", dg: "en" },
+      { name: "Latvian", code: "lv", dg: "lv" },
+      { name: "Ligurian", code: "lij", dg: "en" },
+      { name: "Limburgish", code: "li", dg: "en" },
+      { name: "Lingala", code: "ln", dg: "ln" },
+      { name: "Lithuanian", code: "lt", dg: "lt" },
+      { name: "Lombard", code: "lmo", dg: "en" },
+      { name: "Luganda", code: "lg", dg: "lg" },
+      { name: "Luo", code: "luo", dg: "en" },
+      { name: "Luxembourgish", code: "lb", dg: "lb" },
+      { name: "Macedonian", code: "mk", dg: "mk" },
+      { name: "Madurese", code: "mad", dg: "en" },
+      { name: "Maithili", code: "mai", dg: "hi" },
+      { name: "Makassar", code: "mak", dg: "en" },
+      { name: "Malagasy", code: "mg", dg: "mg" },
+      { name: "Malay", code: "ms", dg: "ms" },
+      { name: "Malay (Jawi)", code: "ms-Arab", dg: "ms" },
+      { name: "Malayalam", code: "ml", dg: "ml" },
+      { name: "Maltese", code: "mt", dg: "mt" },
+      { name: "Mam", code: "mam", dg: "en" },
+      { name: "Manx", code: "gv", dg: "en" },
+      { name: "Maori", code: "mi", dg: "mi" },
+      { name: "Marathi", code: "mr", dg: "mr" },
+      { name: "Marshallese", code: "mh", dg: "en" },
+      { name: "Marwadi", code: "mwr", dg: "hi" },
+      { name: "Mauritian Creole", code: "mfe", dg: "en" },
+      { name: "Meadow Mari", code: "chm", dg: "en" },
+      { name: "Meiteilon (Manipuri)", code: "mni-Mtei", dg: "en" },
+      { name: "Minang", code: "min", dg: "en" },
+      { name: "Mizo", code: "lus", dg: "en" },
+      { name: "Mongolian", code: "mn", dg: "mn" },
+      { name: "Myanmar (Burmese)", code: "my", dg: "my" },
+      { name: "Nahuatl (Eastern Huasteca)", code: "nhe", dg: "en" },
+      { name: "Ndau", code: "ndc-ZW", dg: "en" },
+      { name: "Ndebele (South)", code: "nr", dg: "en" },
+      { name: "Nepalbhasa (Newari)", code: "new", dg: "en" },
+      { name: "Nepali", code: "ne", dg: "ne" },
+      { name: "NKo", code: "bm-Nkoo", dg: "en" },
+      { name: "Norwegian", code: "no", dg: "no" },
+      { name: "Nuer", code: "nus", dg: "en" },
+      { name: "Occitan", code: "oc", dg: "en" },
+      { name: "Odia (Oriya)", code: "or", dg: "or" },
+      { name: "Oromo", code: "om", dg: "om" },
+      { name: "Ossetian", code: "os", dg: "en" },
+      { name: "Pangasinan", code: "pag", dg: "en" },
+      { name: "Papiamento", code: "pap", dg: "en" },
+      { name: "Pashto", code: "ps", dg: "ps" },
+      { name: "Persian", code: "fa", dg: "fa" },
+      { name: "Polish", code: "pl", dg: "pl" },
+      { name: "Portuguese (Brazil)", code: "pt", dg: "pt-BR" },
+      { name: "Portuguese (Portugal)", code: "pt-PT", dg: "pt" },
+      { name: "Punjabi (Gurmukhi)", code: "pa", dg: "pa" },
+      { name: "Punjabi (Shahmukhi)", code: "pa-Arab", dg: "pa" },
+      { name: "Quechua", code: "qu", dg: "en" },
+      { name: "Qʼeqchiʼ", code: "kek", dg: "en" },
+      { name: "Romani", code: "rom", dg: "en" },
+      { name: "Romanian", code: "ro", dg: "ro" },
+      { name: "Rundi", code: "rn", dg: "en" },
+      { name: "Russian", code: "ru", dg: "ru" },
+      { name: "Sami (North)", code: "se", dg: "en" },
+      { name: "Samoan", code: "sm", dg: "en" },
+      { name: "Sango", code: "sg", dg: "en" },
+      { name: "Sanskrit", code: "sa", dg: "sa" },
+      { name: "Santali (Latin)", code: "sat-Latn", dg: "en" },
+      { name: "Santali (Ol Chiki)", code: "sat", dg: "en" },
+      { name: "Scots Gaelic", code: "gd", dg: "en" },
+      { name: "Sepedi", code: "nso", dg: "nso" },
+      { name: "Serbian", code: "sr", dg: "sr" },
+      { name: "Sesotho", code: "st", dg: "st" },
+      { name: "Seychellois Creole", code: "crs", dg: "en" },
+      { name: "Shan", code: "shn", dg: "en" },
+      { name: "Shona", code: "sn", dg: "sn" },
+      { name: "Sicilian", code: "scn", dg: "en" },
+      { name: "Silesian", code: "szl", dg: "en" },
+      { name: "Sindhi", code: "sd", dg: "sd" },
+      { name: "Sinhala", code: "si", dg: "si" },
+      { name: "Slovak", code: "sk", dg: "sk" },
+      { name: "Slovenian", code: "sl", dg: "sl" },
+      { name: "Somali", code: "so", dg: "so" },
+      { name: "Spanish", code: "es", dg: "es" },
+      { name: "Sundanese", code: "su", dg: "su" },
+      { name: "Susu", code: "sus", dg: "en" },
+      { name: "Swahili", code: "sw", dg: "sw" },
+      { name: "Swati", code: "ss", dg: "ss" },
+      { name: "Swedish", code: "sv", dg: "sv" },
+      { name: "Tahitian", code: "ty", dg: "en" },
+      { name: "Tajik", code: "tg", dg: "tg" },
+      { name: "Tamazight", code: "ber-Latn", dg: "en" },
+      { name: "Tamazight (Tifinagh)", code: "ber", dg: "en" },
+      { name: "Tamil", code: "ta", dg: "ta" },
+      { name: "Tatar", code: "tt", dg: "tt" },
+      { name: "Telugu", code: "te", dg: "te" },
+      { name: "Tetum", code: "tet", dg: "en" },
+      { name: "Thai", code: "th", dg: "th" },
+      { name: "Tibetan", code: "bo", dg: "bo" },
+      { name: "Tigrinya", code: "ti", dg: "ti" },
+      { name: "Tiv", code: "tiv", dg: "en" },
+      { name: "Tok Pisin", code: "tpi", dg: "en" },
+      { name: "Tongan", code: "to", dg: "en" },
+      { name: "Tshiluba", code: "lua", dg: "en" },
+      { name: "Tsonga", code: "ts", dg: "ts" },
+      { name: "Tswana", code: "tn", dg: "tn" },
+      { name: "Tulu", code: "tcy", dg: "en" },
+      { name: "Tumbuka", code: "tum", dg: "en" },
+      { name: "Turkish", code: "tr", dg: "tr" },
+      { name: "Turkmen", code: "tk", dg: "tk" },
+      { name: "Tuvan", code: "tyv", dg: "en" },
+      { name: "Twi", code: "ak", dg: "en" },
+      { name: "Udmurt", code: "udm", dg: "en" },
+      { name: "Ukrainian", code: "uk", dg: "uk" },
+      { name: "Urdu", code: "ur", dg: "ur" },
+      { name: "Uyghur", code: "ug", dg: "ug" },
+      { name: "Uzbek", code: "uz", dg: "uz" },
+      { name: "Venda", code: "ve", dg: "en" },
+      { name: "Venetian", code: "vec", dg: "en" },
+      { name: "Vietnamese", code: "vi", dg: "vi" },
+      { name: "Waray", code: "war", dg: "en" },
+      { name: "Welsh", code: "cy", dg: "cy" },
+      { name: "Wolof", code: "wo", dg: "en" },
+      { name: "Xhosa", code: "xh", dg: "xh" },
+      { name: "Yakut", code: "sah", dg: "en" },
+      { name: "Yiddish", code: "yi", dg: "yi" },
+      { name: "Yoruba", code: "yo", dg: "yo" },
+      { name: "Yucatec Maya", code: "yua", dg: "en" },
+      { name: "Zapotec", code: "zap", dg: "en" },
+      { name: "Zulu", code: "zu", dg: "zu" }
+    ];
+
+    // --- 3. UI REFERENCES & INIT ---
+    const ui = {
+        modal: document.getElementById('welcomeModal'),
+        username: document.getElementById('usernameInput'),
+        classIdInput: document.getElementById('classIdInput'),
+        modalJoinBtn: document.getElementById('modalJoinBtn'),
+        modalCreateBtn: document.getElementById('modalCreateBtn'),
+        tabCreate: document.getElementById('tabCreate'),
+        tabJoin: document.getElementById('tabJoin'),
+        createMode: document.getElementById('createMode'),
+        joinMode: document.getElementById('joinMode'),
+        transLog: document.getElementById('transLog'),
+        recvLog: document.getElementById('recvLog'),
+        placeholder: document.getElementById('placeholderText'),
+        micBtn: document.getElementById('micBtn'),
+        micStatus: document.getElementById('micStatus'),
+        srcLang: document.getElementById('srcLang'),
+        tgtLang: document.getElementById('tgtLang'),
+        toast: document.getElementById('toast'),
+        copyIdBtn: document.getElementById('copyIdBtn'),
+        shareWa: document.getElementById('shareWa'),
+        shareSms: document.getElementById('shareSms'),
+        shareMail: document.getElementById('shareMail'),
+        shareFb: document.getElementById('shareFb'),
+        ttsToggle: document.getElementById('ttsToggle')
+    };
+
+    // --- GLOBAL SPEECH & TTS STATE ---
+    let activeTransBubble = null;
+    let activeRecvBubble = null;
+    let transSegmentCount = 0;
+    let recvSegmentCount = 0;
+    
+    let lastTransMsg = null;
+    let lastRecvMsg = null;
+    
+    let ghostTranslationInFlight = false;
+    let lastGhostTranslation = "";
+
+    const ttsQueue = [];
+    let isTtsPlaying = false;
+    const ttsAudio = document.createElement('audio'); // Invisible tts element
+    ttsAudio.id = "tts_global";
+    document.body.appendChild(ttsAudio);
+
+    // Populate Languages (Sorted Alphabetically)
+    function initLangs() {
+        if (!window.JW_LANGUAGES && !window.LANGUAGES_LOAD_RETRY) {
+            window.LANGUAGES_LOAD_RETRY = true;
+            setTimeout(initLangs, 500);
+            return;
+        }
+
+        // Merge existing LANGUAGES (with dg mapping) with JW_LANGUAGES
+        const mergedLangs = [...LANGUAGES];
+        
+        if (window.JW_LANGUAGES) {
+            window.JW_LANGUAGES.forEach(jw => {
+                // Avoid duplicates by code
+                if (!mergedLangs.some(l => l.code === jw.code)) {
+                    mergedLangs.push({
+                        name: jw.name,
+                        code: jw.code,
+                        dg: "en" // Default fallback for STT
+                    });
+                }
+            });
+        }
+        
+        mergedLangs.sort((a, b) => a.name.localeCompare(b.name));
+        window.FULL_LANGUAGES = mergedLangs;
+        
+        const opts = mergedLangs.map((l, i) => `<option value="${i}">${l.name}</option>`).join('');
+        ui.srcLang.innerHTML = opts;
+        ui.tgtLang.innerHTML = opts;
+        
+        const enIndex = mergedLangs.findIndex(l => l.name.includes("English"));
+        ui.srcLang.value = enIndex !== -1 ? enIndex : 0;
+        ui.tgtLang.value = enIndex !== -1 ? enIndex : 0;
+    }
+    initLangs();
+
+    // === MODAL TABS LOGIC ===
+    ui.tabCreate.addEventListener('click', () => {
+        ui.tabCreate.classList.add('active');
+        ui.tabJoin.classList.remove('active');
+        ui.createMode.classList.remove('hidden');
+        ui.joinMode.classList.add('hidden');
+    });
+
+    ui.tabJoin.addEventListener('click', () => {
+        ui.tabJoin.classList.add('active');
+        ui.tabCreate.classList.remove('active');
+        ui.joinMode.classList.remove('hidden');
+        ui.createMode.classList.add('hidden');
+    });
+
+    ui.modalJoinBtn.addEventListener('click', () => {
+        const name = ui.username.value.trim();
+        const enteredId = ui.classIdInput.value.trim().toUpperCase();
+        if(!name) return alert("Please enter your Name");
+        if(!enteredId) return alert("Please enter a Room ID");
+        USER_NAME = name;
+        CURRENT_ROOM_ID = enteredId;
+        enterSession();
+    });
+
+    ui.modalCreateBtn.addEventListener('click', () => {
+        const name = ui.username.value.trim();
+        if(!name) return alert("Please enter your Name first");
+        USER_NAME = name;
+        CURRENT_ROOM_ID = Math.random().toString(36).substring(2, 8).toUpperCase();
+        enterSession();
+    });
+
+    function enterSession() {
+        ui.modal.classList.add('hidden');
+        document.getElementById('roomIdDisplay').textContent = CURRENT_ROOM_ID;
+        initSupabase();
+        
+        // Wake Lock to prevent sleeping
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(console.error);
+        }
+    }
+
+    // === SHARE FUNCTIONALITY ===
+    function showToast(msg) {
+        ui.toast.textContent = msg || "Copied to clipboard";
+        ui.toast.classList.add('show');
+        setTimeout(() => ui.toast.classList.remove('show'), 2000);
+    }
+
+    ui.copyIdBtn.addEventListener('click', () => {
+        if(!CURRENT_ROOM_ID) return;
+        navigator.clipboard.writeText(CURRENT_ROOM_ID);
+        showToast("Room ID Copied");
+    });
+    
+    // Social buttons
+    const getShareUrl = () => `Room ID: ${CURRENT_ROOM_ID}`;
+    ui.shareWa.addEventListener('click', () => CURRENT_ROOM_ID && window.open(`https://wa.me/?text=${encodeURIComponent(getShareUrl())}`, '_blank'));
+    ui.shareSms.addEventListener('click', () => CURRENT_ROOM_ID && window.open(`sms:?&body=${encodeURIComponent(getShareUrl())}`, '_blank'));
+    ui.shareMail.addEventListener('click', () => CURRENT_ROOM_ID && window.open(`mailto:?subject=Join Orbit&body=${encodeURIComponent(getShareUrl())}`, '_blank'));
+    ui.shareFb.addEventListener('click', () => {
+        if(!CURRENT_ROOM_ID) return;
+        navigator.clipboard.writeText(getShareUrl());
+        showToast("ID Copied (Paste in Messenger)");
+    });
+
+    // --- CHAT UI LOGIC ---
+    
+    function countSentences(str) {
+        if (!str) return 0;
+        // Basic sentence detection: look for terminal punctuation followed by space or end of string
+        return (str.match(/[.!?](\s|$)/g) || []).length;
+    }
+
+    async function updateGhost(text) {
+        if(ui.placeholder) ui.placeholder.remove();
+        
+        const now = Date.now();
+        const tooLong = lastTransMsg && (now - lastTransMsg.time > 5000);
+
+        // 1. Transcription Ghost (Top)
+        if (!activeTransBubble || transSegmentCount >= 2 || tooLong) {
+            // Start a new bubble if none active, 2 segments reached, or pause > 5s
+            addMessage("You", "", "...", true);
+            activeTransBubble = lastTransMsg.element.querySelector('.msg-text-box');
+            transSegmentCount = 0;
+        }
+        
+        // Find or create ghost span
+        let gspan = activeTransBubble.querySelector('.ghost');
+        if (!gspan) {
+            gspan = document.createElement('span');
+            gspan.className = 'ghost';
+            activeTransBubble.appendChild(gspan);
+        }
+        gspan.textContent = text;
+        ui.transLog.scrollTop = ui.transLog.scrollHeight;
+        
+        // 2. Parallel Real-Time Translation (Bottom)
+        const myTargetIdx = ui.tgtLang.value;
+        const myTargetCode = window.FULL_LANGUAGES?.[myTargetIdx]?.code || 'en';
+        const srcLangIdx = ui.srcLang.value;
+        const srcLangCode = window.FULL_LANGUAGES?.[srcLangIdx]?.code || 'en';
+        
+        if (srcLangCode !== myTargetCode && text.length > 3 && !ghostTranslationInFlight) {
+            const significantChange = Math.abs(text.length - lastGhostTranslation.length) > 10;
+            const isWordEnd = /[\s\.\,\?\!]$/.test(text);
+
+            if (significantChange || isWordEnd) {
+                ghostTranslationInFlight = true;
+                try {
+                    const interimTrans = await window.translateText(text, myTargetCode);
+                    if (interimTrans) {
+                        if (!activeRecvBubble || recvSegmentCount >= 2 || tooLong) {
+                            addTranslationOnly("You", "", true);
+                            activeRecvBubble = lastRecvMsg.element.querySelector('.msg-trans-box');
+                            recvSegmentCount = 0;
+                        }
+                        let rgspan = activeRecvBubble.querySelector('.ghost');
+                        if (!rgspan) {
+                            rgspan = document.createElement('span');
+                            rgspan.className = 'ghost';
+                            activeRecvBubble.appendChild(rgspan);
+                        }
+                        rgspan.textContent = interimTrans;
+                        lastGhostTranslation = text;
+                        ui.recvLog.scrollTop = ui.recvLog.scrollHeight;
+                    }
+                } catch(e) {} finally {
+                    ghostTranslationInFlight = false;
+                }
+            }
+        }
+    }
+
+    function finalizeGhost(finalText, lang) {
+        if (!activeTransBubble) return;
+        
+        const now = Date.now();
+        // Finalize transcription span
+        const gspan = activeTransBubble.querySelector('.ghost');
+        if (gspan) {
+            // Check if there is already permanent text in the bubble (not counting the ghost span)
+            const hasPermanentText = activeTransBubble.textContent.length > gspan.textContent.length;
+            const separator = hasPermanentText ? " " : "";
+            const finalNode = document.createTextNode(separator + finalText);
+            gspan.replaceWith(finalNode);
+            transSegmentCount++;
+            if (lastTransMsg) lastTransMsg.time = now;
+        }
+        
+        const myTargetIdx = ui.tgtLang.value;
+        const myTargetCode = window.FULL_LANGUAGES?.[myTargetIdx]?.code || 'en';
+        
+        // Translation and TTS
+        (async () => {
+            const myTranslation = (lang !== myTargetCode) ? 
+                await window.translateText(finalText, myTargetCode) : finalText;
+
+            if (myTranslation) {
+                // Finalize translation span if it exists
+                if (activeRecvBubble) {
+                    const rgspan = activeRecvBubble.querySelector('.ghost');
+                    if (rgspan) {
+                        const hasPermanentRecv = activeRecvBubble.textContent.length > rgspan.textContent.length;
+                        const rsep = hasPermanentRecv ? " " : "";
+                        const finalTransNode = document.createTextNode(rsep + myTranslation);
+                        rgspan.replaceWith(finalTransNode);
+                        recvSegmentCount++;
+                        if (lastRecvMsg) lastRecvMsg.time = now;
+                    } else if (lang !== myTargetCode) {
+                        addTranslationOnly("You", myTranslation, true);
+                    }
+                } else if (lang !== myTargetCode) {
+                    addTranslationOnly("You", myTranslation, true);
+                }
+
+                if (document.getElementById('autoplayOwnToggle').checked && document.getElementById('ttsToggle').checked) {
+                    window.enqueueTTS(myTranslation);
+                }
+            }
+        })();
+
+        // Broadcast original
+        window.broadcastSpeech(finalText, lang);
+    }
+
+
+    function countSentences(str) {
+        if (!str) return 0;
+        // Basic sentence detection: look for terminal punctuation followed by space or end of string
+        return (str.match(/[.!?](\s|$)/g) || []).length;
+    }
+
+    function addMessage(name, text, langCode, isMe = false) {
+        if(ui.placeholder) ui.placeholder.remove();
+        
+        // Segmenting Logic for External messages
+        const now = Date.now();
+        if (!isMe && lastTransMsg && lastTransMsg.name === name) {
+            const textBox = lastTransMsg.element.querySelector('.msg-text-box');
+            const currentCount = countSentences(textBox.textContent);
+            
+            if (currentCount < 2 && (now - lastTransMsg.time < 5000)) {
+                textBox.textContent += (textBox.textContent.endsWith(' ') ? '' : ' ') + text;
+                lastTransMsg.time = now;
+                ui.transLog.scrollTop = ui.transLog.scrollHeight;
+                return;
+            }
+        }
+
+        const div = document.createElement('div');
+        div.className = isMe ? 'msg-item me' : 'msg-item';
+        div.innerHTML = `
+            <div class="msg-meta">
+                <span class="msg-trg-label">SRC</span>
+                <span class="msg-name">${isMe ? 'You' : name} (${langCode.toUpperCase()})</span>
+            </div>
+            <div class="msg-text-box">${text}</div>
+        `;
+        ui.transLog.appendChild(div);
+        ui.transLog.scrollTop = ui.transLog.scrollHeight;
+        
+        lastTransMsg = { name, element: div, time: now };
+    }
+
+    function addTranslationOnly(name, translation, isMe = false) {
+        const now = Date.now();
+        // Segmenting Logic for Translation
+        if (!isMe && lastRecvMsg && lastRecvMsg.name === name) {
+            const transBox = lastRecvMsg.element.querySelector('.msg-trans-box');
+            const currentCount = countSentences(transBox.textContent);
+            
+            if (currentCount < 2 && (now - lastRecvMsg.time < 5000)) {
+                transBox.textContent += (transBox.textContent.endsWith(' ') ? '' : ' ') + translation;
+                lastRecvMsg.time = now;
+                ui.recvLog.scrollTop = ui.recvLog.scrollHeight;
+                return;
+            }
+        }
+
+        const div = document.createElement('div');
+        div.className = isMe ? 'msg-item me' : 'msg-item';
+        div.innerHTML = `
+            <div class="msg-meta">
+                <span class="msg-trg-label">TRG</span>
+                <span class="msg-name">${isMe ? 'You' : name}</span>
+            </div>
+            <div class="msg-trans-box">${translation}</div>
+        `;
+        ui.recvLog.appendChild(div);
+        ui.recvLog.scrollTop = ui.recvLog.scrollHeight;
+        
+        lastRecvMsg = { name, element: div, time: now };
+    }
+</script>
+
+<script type="module">
+// --- 4. SUPABASE MESH NETWORK ---
+let supabase = null;
+let channel = null;
+
+window.initSupabase = async function() {
+    if(!supabase) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    if(channel) supabase.removeChannel(channel);
+
+    channel = supabase.channel(`room:${CURRENT_ROOM_ID}`);
+    
+    channel.on('broadcast', { event: 'speech' }, async (payload) => {
+        const data = payload.payload;
+        if (data.sender_id === INSTANCE_ID) return;
+
+        const myTargetIdx = document.getElementById('tgtLang').value;
+        const myTargetCode = LANGUAGES[myTargetIdx]?.code || 'en';
+
+        // 1. Add original message to Transcription log
+        window.addMessage(data.name, data.text, data.lang);
+        
+        // 2. Translate and add to Translation log (in parallel)
+        if (data.lang !== myTargetCode) {
+            const finalText = await window.translateText(data.text, myTargetCode);
+            if (finalText && finalText !== data.text) {
+                window.addTranslationOnly(data.name, finalText);
+                if (document.getElementById('ttsToggle').checked) {
+                    window.enqueueTTS(finalText);
+                }
+            } else if (document.getElementById('ttsToggle').checked) {
+                window.enqueueTTS(data.text);
+            }
+        } else {
+            if (document.getElementById('ttsToggle').checked) {
+                window.enqueueTTS(data.text);
+            }
+        }
+    }).subscribe();
+
+    await supabase.auth.signInAnonymously();
+};
+
+window.broadcastSpeech = async function(text, langCode) {
+    if(!channel) return;
+    
+    await channel.send({
+        type: 'broadcast',
+        event: 'speech',
+        payload: {
+            sender_id: INSTANCE_ID,
+            name: USER_NAME,
+            text: text,
+            lang: langCode // Sending the TRANSLATION code (e.g. 'byv' or 'fr')
+        }
+    });
+};
+</script>
+
+<script>
+// --- 5. SERVICES & UTILS ---
+
+window.translateText = async function(text, targetCode) {
+    const OLLAMA_HOST = "http://168.231.78.113:11434";
+    const llmProvider = document.getElementById('llmProvider')?.value || 'ollama-cloud';
+    
+    const targetLangObj = window.FULL_LANGUAGES?.find(l => l.code === targetCode) || { name: targetCode };
+    const langName = targetLangObj.name;
+
+    // 1. Try Google Translate first
+    const fetchGoogleTranslation = async () => {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
+        try {
+            const r = await fetch(url);
+            if(!r.ok) return null;
+            const d = await r.json();
+            return d[0].map(x => x[0]).join("");
+        } catch (err) { return null; }
+    };
+
+    // 2. Fallback to LLM (Ollama Cloud/Local or Gemini)
+    const fetchLLMTranslation = async () => {
+        const prompt = `Translate the following text to ${langName}. Only output the translated text, nothing else:\n\n${text}`;
+        
+        try {
+            if (llmProvider === 'gemini') {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || text;
+            } else {
+                const model = llmProvider === 'ollama-local' ? 'gemma3:4b' : 'gemini-3-pro-preview:latest';
+                const headers = { "Content-Type": "application/json" };
+                if (llmProvider === 'ollama-cloud') headers["Authorization"] = `Bearer ${OLLAMA_CLOUD_KEY}`;
+
+                const res = await fetch(`${OLLAMA_HOST}/api/generate`, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify({ model: model, prompt: prompt, stream: false })
+                });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                return data.response?.trim() || text;
+            }
+        } catch(err) {
+            console.error("LLM translation failed:", err);
+            return text;
+        }
+    };
+    
+    const googleResult = await fetchGoogleTranslation();
+    if (googleResult && googleResult.trim().toLowerCase() !== text.trim().toLowerCase()) return googleResult;
+    return await fetchLLMTranslation();
+};
+
+
+// Ollama-powered TTS Text Refinement
+// Adds human nuances, emotions, and SSML tags to make speech more natural
+window.refineForTTS = async function(text) {
+    const OLLAMA_HOST = "http://168.231.78.113:11434";
+    const GEMINI_API_KEY = "AIzaSyCCHIEeapZHMoNTJYgH6nhwTCbnL2It72M";
+    
+    const llmProvider = document.getElementById('llmProvider')?.value || 'ollama-cloud';
+    
+    const refinementPrompt = `You are a speech director preparing text for text-to-speech synthesis.
+Analyze the following text and add appropriate emotion tags and natural pauses.
+
+Rules:
+1. Wrap the entire text with ONE primary emotion tag from: neutral, happy, excited, sad, angry, calm, curious, confident
+2. Add [laughter] where humor is appropriate
+3. Add brief pauses with ... for emphasis
+4. Keep the original meaning intact
+5. Output ONLY the refined text, nothing else
+
+Emotions to choose from: neutral, happy, excited, content, sad, angry, calm, curious, confident, grateful, sympathetic, mysterious, determined
+
+Text to refine:
+"${text}"
+
+Refined output:`;
+    
+    try {
+        let refined = null;
+        
+        if (llmProvider === 'gemini') {
+            // Gemini API
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: refinementPrompt }] }]
+                })
+            });
+            
+            if (!res.ok) throw new Error("Gemini request failed");
+            const data = await res.json();
+            refined = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            
+        } else {
+            // Ollama (Local or Cloud)
+            const model = llmProvider === 'ollama-local' ? 'gemma3:4b' : 'gemini-3-pro-preview:latest';
+            
+            const headers = { "Content-Type": "application/json" };
+            if (llmProvider === 'ollama-cloud') headers["Authorization"] = `Bearer ${OLLAMA_CLOUD_KEY}`;
+            
+            const res = await fetch(`${OLLAMA_HOST}/api/generate`, {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify({
+                    model: model,
+                    prompt: refinementPrompt,
+                    stream: false
+                })
+            });
+            
+            if (!res.ok) throw new Error("Ollama request failed");
+            const data = await res.json();
+            refined = data.response?.trim();
+        }
+        
+        // Extract emotion if present in response
+        const emotionMatch = refined?.match(/<emotion\s+value="([^"]+)"\s*\/?>/i);
+        const detectedEmotion = emotionMatch ? emotionMatch[1] : null;
+        
+        return {
+            text: refined || text,
+            emotion: detectedEmotion
+        };
+    } catch(err) {
+        console.warn("TTS refinement skipped:", err);
+        return { text: text, emotion: null };
+    }
+};
+
+window.enqueueTTS = async function(text) {
+    if (!text) return;
+    const provider = document.getElementById('ttsProvider') ? document.getElementById('ttsProvider').value : 'cartesia';
+    ttsQueue.push({ text, provider });
+    if (!isTtsPlaying) playNextTTS();
+};
+
+async function playNextTTS() {
+    if (ttsQueue.length === 0) {
+        isTtsPlaying = false;
+        return;
+    }
+
+    isTtsPlaying = true;
+    const item = ttsQueue.shift();
+    const { text, provider } = item;
+    
+    try {
+        let audioUrl = null;
+
+        if (provider === 'gemini') {
+            if (window.playGeminiTTS) window.playGeminiTTS(text);
+            setTimeout(playNextTTS, 2500); 
+            return;
+        }
+
+        if (['kokoro', 'supertonic', 'chatterbox', 'piper'].includes(provider)) {
+            const res = await fetch(`http://localhost:8002/synthesize?engine=${provider}&text=${encodeURIComponent(text)}`);
+            if (res.ok) {
+                const blob = await res.blob();
+                audioUrl = URL.createObjectURL(blob);
+            }
+        } else if (['cartesia'].includes(provider)) {
+            const refined = await window.refineForTTS(text);
+            const res = await fetch("https://api.cartesia.ai/tts/bytes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-API-Key": CARTESIA_KEY, "Cartesia-Version": "2024-06-10" },
+                body: JSON.stringify({
+                    model_id: "sonic-3-latest",
+                    transcript: refined.text,
+                    voice: { mode: "id", id: "cbaf8084-f009-4838-a096-07ee2e6612b1" },
+                    output_format: { container: "wav", encoding: "pcm_f32le", sample_rate: 44100 },
+                    context_id: CURRENT_ROOM_ID, // Use room ID as context for speech continuity
+                    continue: true,
+                    generation_config: { emotion: refined.emotion || 'neutral' }
+                })
+            });
+            if (res.ok) {
+                const blob = await res.blob();
+                audioUrl = URL.createObjectURL(blob);
+            }
+        }
+
+        if (audioUrl) {
+            const audioObj = document.getElementById('tts_global');
+            audioObj.src = audioUrl;
+            await audioObj.play();
+            audioObj.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                playNextTTS();
+            };
+        } else {
+            playNextTTS();
+        }
+    } catch (err) {
+        console.error("TTS Queue error:", err);
+        playNextTTS();
+    }
+}
+
+// --- 6. AUDIO & DEEPGRAM ---
+let dgSocket;
+let mediaRecorder;
+let isMicOn = false;
+let audioStream = null;
+
+const canvas = document.getElementById('vizCanvas');
+const ctx = canvas.getContext('2d');
+let audioCtx, analyser;
+
+function drawSilence() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#333";
+    ctx.fillRect(0, 19, canvas.width, 2);
+}
+drawSilence();
+
+function visualize(stream) {
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Resume context if suspended (common browser policy)
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    
+    if(analyser) {
+        // cleanup old connections if restarting
+    }
+    
+    analyser = audioCtx.createAnalyser();
+    const src = audioCtx.createMediaStreamSource(stream);
+    src.connect(analyser);
+    analyser.fftSize = 64;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    function draw() {
+        if(!isMicOn) { drawSilence(); return; }
+        requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const barWidth = (canvas.width / bufferLength) * 2;
+        let x = 0;
+        for(let i = 0; i < bufferLength; i++) {
+            const barHeight = (dataArray[i] / 255) * canvas.height;
+            ctx.fillStyle = `rgba(255, 255, 255, ${barHeight/40 + 0.2})`; 
+            ctx.fillRect(x, (canvas.height - barHeight)/2, barWidth, barHeight);
+            x += barWidth + 1;
+        }
+    }
+    draw();
+}
+
+
+
+/* --- INSANELY FAST WHISPER (LOCAL) --- */
+let insanelyFastApp = null;
+
+async function startInsanelyFastSocket(langIndex) {
+    try {
+        const { Client } = await import("https://cdn.jsdelivr.net/npm/@gradio/client@0.10.0/dist/index.min.js");
+        
+        if(!insanelyFastApp) {
+             console.log("Connecting to Local Insanely Fast Whisper (Port 8003)...");
+             // Connect to local docker container
+             insanelyFastApp = await Client.connect("http://localhost:8003/");
+        }
+        
+        console.log("Insanely Fast Whisper Connected.");
+        
+        if(mediaRecorder && mediaRecorder.state !== 'recording') {
+            await mediaRecorder.start(250); 
+        }
+        
+        ui.micStatus.textContent = "Fast";
+        ui.micStatus.style.color = "#d90429"; // Fast Red
+        ui.micStatus.classList.remove('status-hidden');
+
+    } catch(e) {
+        console.error("Insanely Fast Error:", e);
+        alert("Failed to connect to Local Insanely Fast Whisper on port 8003. Is docker running?");
+        // Fallback
+        document.getElementById('sttProvider').value = 'deepgram';
+        startSTTSocket(langIndex);
+    }
+}
+
+function handleAudioDataForInsanelyFast(blob) {
+    if(!insanelyFastApp || !isMicOn) return;
+    try {
+        // Typical insanely-fast-whisper webui input structure
+        // Often it wants a file.
+        insanelyFastApp.predict(0, [blob, "transcribe", null]).then(result => {
+             // Result format: { data: ["Transcript...", "Runtime info"] }
+             console.log("Insanely Fast Result:", result);
+             if(result && result.data && result.data[0]) {
+                 const txt = result.data[0];
+                 const transCode = LANGUAGES[ui.srcLang.value].code;
+                 finalizeGhost(txt, transCode);
+                 window.broadcastSpeech(txt, transCode);
+             }
+        }).catch(err => console.error(err));
+    } catch(e) { console.error(e); }
+}
+
+/* --- NEMOTRON HF INTEGRATION --- */
+let nemotronApp = null;
+let nemotronStream = null;
+
+async function startNemotronSocket(langIndex) {
+    // Nemotron is English-focused (en-0.6b)
+    // We will attempt to use it, but warn if non-English
+    const langObj = LANGUAGES[langIndex];
+    if(langObj.code !== 'en' && langObj.code !== 'en-US') {
+        console.warn("Nemotron 0.6B is primarily for English. Result quality may vary.");
+    }
+
+    try {
+        const { Client } = await import("https://cdn.jsdelivr.net/npm/@gradio/client@0.10.0/dist/index.min.js");
+        
+        if(!nemotronApp) {
+             console.log("Connecting to Nemotron Space...");
+             nemotronApp = await Client.connect("nvidia/nemotron-speech-streaming-en-0.6b");
+        }
+        
+        console.log("Nemotron Connected. Starting Stream...");
+        
+        // Start Microphone
+        if(mediaRecorder && mediaRecorder.state !== 'recording') {
+            await mediaRecorder.start(250); 
+        }
+        
+        ui.micStatus.textContent = "Nemo";
+        ui.micStatus.style.color = "#76b900"; // Nvidia Green
+        ui.micStatus.classList.remove('status-hidden');
+
+        // Note: Actual streaming with Gradio JS client from raw MediaRecorder blobs 
+        // is complex. We will implement a chunk-based submission or use a specific 
+        // queue mechanism if the space supports it. 
+        // For now, we simulate streaming by sending chunks every 1-2s.
+        // A true robust implementation requires the Space to support specific websocket protocols.
+        
+    } catch(e) {
+        console.error("Nemotron Error:", e);
+        alert(`Nemotron Connection Failed:\n${e.message || e}\n\nFalling back to Deepgram.`);
+        
+        // Fallback: Switch to Deepgram to avoid loop
+        document.getElementById('sttProvider').value = 'deepgram';
+        startSTTSocket(langIndex); 
+    }
+}
+
+// Override Audio Data Handler for Nemotron Logic
+function handleAudioDataForNemotron(blob) {
+    if(!nemotronApp || !isMicOn) return;
+    
+    // Using submit() to the endpoint. We guess fn_index=0 or typical 'transcribe'
+    // This is experimental without 'app.py' confirmation
+    try {
+        // Many audio spaces take a blob/file as input
+        nemotronApp.predict(0, [blob]).then(result => {
+             // Result format depends on the space associated API
+             // usually: { data: ["Transcript text"] }
+             console.log("Nemotron Result:", result);
+             if(result && result.data && result.data[0]) {
+                 const txt = result.data[0];
+                 const transCode = LANGUAGES[ui.srcLang.value].code;
+                 finalizeGhost(txt, transCode);
+                 window.broadcastSpeech(txt, transCode);
+             }
+        }).catch(err => console.error("Nemotron Predict Error:", err));
+    } catch(e) { console.error(e); }
+}
+
+/* --- GEMINI NATIVE INTEGRATION --- */
+let geminiSTTSocket = null;
+let geminiTTSSocket = null;
+
+async function startGeminiSocket(langIndex) {
+    if(geminiSTTSocket) geminiSTTSocket.close();
+    
+    try {
+        console.log("Connecting to Gemini Native STT...");
+        geminiSTTSocket = new WebSocket("ws://localhost:8004/ws/stt");
+        
+        geminiSTTSocket.onopen = () => {
+             if(mediaRecorder && mediaRecorder.state !== 'recording') {
+                mediaRecorder.start(250);
+            }
+            ui.micStatus.textContent = "Gemini";
+            ui.micStatus.style.color = "#4285F4"; // Google Blue
+            ui.micStatus.classList.remove('status-hidden');
+        };
+        
+        geminiSTTSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if(data.type === "transcript" && data.text) {
+                 const transCode = LANGUAGES[ui.srcLang.value].code;
+                 finalizeGhost(data.text, transCode);
+                 window.broadcastSpeech(data.text, transCode);
+            }
+        };
+        
+        geminiSTTSocket.onerror = (e) => {
+            console.error("Gemini Socket Error", e);
+            alert("Gemini Connection Failed. Is 'gemini-proxy' running?");
+            // Fallback
+            document.getElementById('sttProvider').value = 'deepgram';
+            startSTTSocket(langIndex);
+        };
+        
+    } catch(e) {
+        console.error("Gemini Setup Error", e);
+    }
+}
+
+async function playGeminiTTS(text) {
+     if(!geminiTTSSocket || geminiTTSSocket.readyState !== WebSocket.OPEN) {
+         geminiTTSSocket = new WebSocket("ws://localhost:8004/ws/tts");
+         
+         await new Promise((resolve, reject) => {
+             geminiTTSSocket.onopen = resolve;
+             geminiTTSSocket.onerror = reject;
+         });
+         
+         geminiTTSSocket.onmessage = async (event) => {
+             // Received audio blob
+             const blob = event.data; // Blob or ArrayBuffer
+             const url = URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob]));
+             const audio = new Audio(url);
+             await audio.play();
+         };
+     }
+     
+     geminiTTSSocket.send(JSON.stringify({ text: text }));
+}
+
+async function startSTTSocket(langIndex) {
+    const provider = document.getElementById('sttProvider').value;
+    
+    if (provider === 'nemotron') return startNemotronSocket(langIndex);
+    if (provider === 'insanely-fast') return startInsanelyFastSocket(langIndex);
+    if (provider === 'gemini') return startGeminiSocket(langIndex);
+    
+    // ... Existing Logic for Deepgram/Local ...
+    if(dgSocket) dgSocket.close();
+
+    // Get the Robust Mapping
+    const langObj = window.FULL_LANGUAGES?.[langIndex];
+    const dgCode = langObj ? langObj.dg : 'en'; 
+    const transCode = langObj ? langObj.code : 'en'; 
+
+    // Use Nova-2 for robust multilingual support
+    const url = `wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true&punctuate=true&language=${dgCode}`;
+    
+    dgSocket = new WebSocket(url, ['token', DEEPGRAM_KEY]);
+
+    dgSocket.onopen = () => {
+        if(mediaRecorder && mediaRecorder.state !== 'recording') {
+            mediaRecorder.start(250);
+        }
+        ui.micStatus.textContent = "Live";
+        ui.micStatus.style.color = "#EB5757";
+    };
+
+    dgSocket.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+        const alt = data.channel?.alternatives[0];
+        if(alt && alt.transcript) {
+            const txt = alt.transcript.trim();
+            if(!txt) return;
+
+            // Handle both Deepgram and Local formats
+            if (data.is_final) {
+                finalizeGhost(txt, transCode);
+                window.broadcastSpeech(txt, transCode);
+            } else {
+                updateGhost(txt);
+            }
+        }
+    };
+    
+    dgSocket.onclose = () => {
+        // Auto-reconnect if mic is still technically on but socket dropped
+        if(isMicOn) {
+            console.log("Socket closed, reconnecting...");
+            // Small delay to prevent loops
+            setTimeout(() => { if(isMicOn) startSTTSocket(langIndex); }, 1000);
+        }
+    };
+}
+
+// Handle Language Change dynamically
+ui.srcLang.addEventListener('change', () => {
+    if(isMicOn) {
+        // Restart socket with new language
+        startSTTSocket(ui.srcLang.value);
+    }
+});
+
+async function toggleMic() {
+    if(isMicOn) {
+        // STOP
+        isMicOn = false;
+        ui.micBtn.classList.remove('active');
+        ui.micStatus.style.opacity = 0;
+        
+        if(mediaRecorder) mediaRecorder.stop();
+        if(dgSocket) dgSocket.close(); // This triggers onclose, but isMicOn is false, so no reconnect
+        
+        if(audioStream) audioStream.getTracks().forEach(track => track.stop());
+        drawSilence();
+        return;
+    }
+
+    // START
+    try {
+        ui.micStatus.textContent = "Init...";
+        ui.micStatus.style.opacity = 1;
+        ui.micStatus.style.color = "#888";
+
+        const constraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
+        audioStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        isMicOn = true;
+        ui.micBtn.classList.add('active');
+        
+        visualize(audioStream);
+
+        // Determine supported mime type (Robustness for Safari vs Chrome)
+        let mimeType = 'audio/webm';
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            mimeType = 'audio/mp4'; // Safari fallback
+        }
+
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+        
+        mediaRecorder.addEventListener('dataavailable', e => {
+            if(e.data.size > 0) {
+                const provider = document.getElementById('sttProvider').value;
+                if(provider === 'nemotron') {
+                    handleAudioDataForNemotron(e.data);
+                } else if(provider === 'insanely-fast') {
+                    handleAudioDataForInsanelyFast(e.data);
+                } else if(provider === 'gemini') {
+                    if(geminiSTTSocket && geminiSTTSocket.readyState === 1) {
+                        geminiSTTSocket.send(e.data);
+                    }
+                } else if(dgSocket && dgSocket.readyState === 1) {
+                    dgSocket.send(e.data);
+                }
+            }
+        });
+
+        startSTTSocket(ui.srcLang.value);
+
+    } catch(e) {
+        console.error(e);
+        isMicOn = false;
+        ui.micBtn.classList.remove('active');
+        ui.micStatus.style.opacity = 0;
+        alert("Could not access microphone. Please check permissions.");
+    }
+}
+
+ui.micBtn.addEventListener('click', toggleMic);
+</script>
+</body>
+</html>

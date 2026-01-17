@@ -1,0 +1,137 @@
+======================================================================
+JW.org Full Training Data Scraper
+======================================================================
+Started: 2026-01-17T09:13:37.442268
+
+Total languages: 1139
+Text languages (non-sign): 1033
+
+[Phase 1] Scraping content from all languages...
+--------------------------------------------------
+  [10/1033] ✓ Acholi - Total: 10
+  [20/1033] ✓ Albanian - Total: 20
+  [30/1033] ✓ Anal - Total: 30
+  [40/1033] ✓ Arabic (Sudanese Creole) - Total: 40
+  [50/1033] ✓ Assamese - Total: 50
+  [60/1033] ✓ Awajun - Total: 60
+  [70/1033] ✓ Bafia - Total: 70
+  [80/1033] ✓ Bariba - Total: 80
+  [90/1033] ✓ Beas - Total: 90
+  [100/1033] ✓ Bhojpuri (Mauritius) - Total: 100
+  → Checkpoint: training_data/raw_data_checkpoint_100.json (100 languages)
+  [110/1033] ✓ Bosnian - Total: 110
+  [120/1033] ✓ Bushi - Total: 120
+  [130/1033] ✓ Catalan - Total: 130
+  [140/1033] ✓ Cherokee - Total: 140
+  [150/1033] ✓ Chin (Zotung) - Total: 150
+  [160/1033] ✓ Chinese Mandarin (Simplified) - Total: 160
+  [170/1033] ✓ Chol - Total: 170
+  [180/1033] ✓ Cinamwanga - Total: 180
+  [190/1033] ✓ Cree West Swampy (Roman) - Total: 190
+  [200/1033] ✓ Dagbani - Total: 200
+  → Checkpoint: training_data/raw_data_checkpoint_200.json (200 languages)
+  [210/1033] ✓ Dendi - Total: 210
+  [220/1033] ✓ Dungan - Total: 220
+  [230/1033] ✓ Efate (South) - Total: 230
+  [240/1033] ✓ Erzya - Total: 240
+  [250/1033] ✓ Fe'fe' - Total: 250
+  [260/1033] ✓ Fulfulde (Maasina) - Total: 260
+  [270/1033] ✓ Garo (Abeng) - Total: 270
+  [280/1033] ✓ Gogo - Total: 280
+  [290/1033] ✓ Guambiano - Total: 290
+  [300/1033] ✓ Gun - Total: 300
+  → Checkpoint: training_data/raw_data_checkpoint_300.json (300 languages)
+  [310/1033] ✓ Hamshen (Armenian) - Total: 310
+  [320/1033] ✓ Hebrew - Total: 320
+  [330/1033] ✓ Hmong (White) - Total: 330
+  [340/1033] ✓ Iban - Total: 340
+  [350/1033] ✓ Ijaw - Total: 350
+  [360/1033] ✓ Italian - Total: 360
+  [370/1033] ✓ Javanese (Eastern) - Total: 370
+  [380/1033] ✓ Kadavu - Total: 380
+  [390/1033] ✓ Kambera - Total: 390
+  [400/1033] ✓ Karen (Pwo Northern) - Total: 400
+  → Checkpoint: training_data/raw_data_checkpoint_400.json (400 languages)
+  [410/1033] ✓ Kemak - Total: 410
+  [420/1033] ✓ Kikongo - Total: 420
+  [430/1033] ✓ Kipende - Total: 430
+  [440/1033] ✓ Komi - Total: 440
+  [450/1033] ✓ Kosraean - Total: 450
+  [460/1033] ✓ Kunama - Total: 460
+  [470/1033] ✓ Kuvale (Mucubal) - Total: 470
+  [480/1033] ✓ Lak - Total: 480
+  [490/1033] ✓ Latvian - Total: 490
+  [500/1033] ✓ Limba (West-Central) - Total: 500
+  → Checkpoint: training_data/raw_data_checkpoint_500.json (500 languages)
+  [510/1033] ✓ Lomongo - Total: 510
+  [520/1033] ✓ Luxembourgish - Total: 520
+  [530/1033] ✓ Mahorian (Roman) - Total: 530
+  [540/1033] ✓ Malagasy - Total: 540
+  [550/1033] ✓ Mambae (Ainaro and Same) - Total: 550
+  [560/1033] ✓ Maninkakan (Eastern) - Total: 560
+  [570/1033] ✓ Maragoli - Total: 570
+  [580/1033] ✓ Mashi - Total: 580
+  [590/1033] ✓ Mbala - Total: 590
+  [600/1033] ✓ Mentawai - Total: 600
+  → Checkpoint: training_data/raw_data_checkpoint_600.json (600 languages)
+  [610/1033] ✓ Mixtec (Guerrero) - Total: 610
+  [630/1033] ✓ Myanmar - Total: 628
+  [640/1033] ✓ Nahuatl (Northern Puebla) - Total: 638
+  [650/1033] ✓ Navajo - Total: 648
+  [660/1033] ✓ Nepali - Total: 658
+  [670/1033] ✓ Nhengatu - Total: 668
+  [680/1033] ✓ Norwegian - Total: 678
+  [690/1033] ✓ Nyungwe - Total: 688
+  [700/1033] ✓ Ossetian - Total: 698
+  → Checkpoint: training_data/raw_data_checkpoint_700.json (698 languages)
+  [710/1033] ✓ Paicî - Total: 708
+  [720/1033] ✓ Pehuenche - Total: 718
+  [730/1033] ✓ Pitjantjatjara - Total: 728
+  [740/1033] ✓ Portuguese (Portugal) - Total: 738
+  [750/1033] ✓ Quechua (Ayacucho) - Total: 748
+  [760/1033] ✓ Quichua (Cotopaxi) - Total: 758
+  [770/1033] ✓ Romanian (Vlach) - Total: 768
+  [780/1033] ✓ Romany (Crimea) - Total: 778
+  [790/1033] ✓ Romany (Moldova) Cyrillic - Total: 788
+  [800/1033] ✓ Ronga - Total: 798
+  → Checkpoint: training_data/raw_data_checkpoint_800.json (798 languages)
+  [810/1033] ✓ Réunion Creole - Total: 808
+  [820/1033] ✓ Sangir - Total: 818
+  [830/1033] ✓ Seediq - Total: 828
+  [840/1033] ✓ Sesotho (South Africa) - Total: 838
+  [850/1033] ✓ Sidama - Total: 848
+  [860/1033] ✓ Solomon Islands Pidgin - Total: 858
+  [870/1033] ✓ Sundargadi - Total: 868
+  [880/1033] ✓ Swiss German - Total: 878
+  [890/1033] ✓ Tajiki (Samarkand) - Total: 888
+  [900/1033] ✓ Tandroy - Total: 898
+  → Checkpoint: training_data/raw_data_checkpoint_900.json (898 languages)
+  [910/1033] ✓ Tausug - Total: 908
+  [920/1033] ✓ Tewe - Total: 918
+  [930/1033] ✓ Tigrinya - Total: 928
+  [940/1033] ✓ Tongan - Total: 938
+  [950/1033] ✓ Tulu - Total: 948
+  [960/1033] ✓ Twi - Total: 958
+  [970/1033] ✓ Uighur (Cyrillic) - Total: 968
+  [980/1033] ✓ Valencian - Total: 978
+  [990/1033] ✓ Wanga - Total: 988
+  [1000/1033] ✓ Wolof - Total: 998
+  → Checkpoint: training_data/raw_data_checkpoint_1000.json (998 languages)
+  [1010/1033] ✓ Yami - Total: 1008
+  [1020/1033] ✓ Zande - Total: 1018
+  [1030/1033] ✓ Zapotec (del Valle) - Total: 1028
+
+✓ Raw data saved: training_data/jw_raw_content.json
+
+[Phase 2] Creating training pairs...
+--------------------------------------------------
+✓ Training pairs saved: training_data/jw_training_pairs.jsonl
+  Total pairs: 2060
+
+======================================================================
+SCRAPING COMPLETE
+======================================================================
+  Languages scraped: 1031
+  Failed: 2
+  Training pairs: 2060
+  Finished: 2026-01-17T09:54:13.627891

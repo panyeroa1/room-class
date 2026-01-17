@@ -1,0 +1,28 @@
+# TTS Server with Multiple Engines
+# Supports Chatterbox (voice cloning) and Kokoro (high quality)
+
+# Core dependencies (numpy MUST be first for chatterbox/pkuseg)
+numpy>=1.24.0
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+soundfile>=0.12.0
+scipy>=1.11.0
+
+# Chatterbox TTS (ResembleAI - voice cloning)
+chatterbox-tts>=0.1.0
+
+# Kokoro TTS (Sony - lightweight, high quality)
+# Note: Install separately if not on PyPI yet
+# pip install git+https://github.com/hexgrad/kokoro.git
+
+# Optional: Coqui XTTS (alternative with voice cloning)
+# TTS>=0.22.0
+
+# Supertonic dependencies
+onnxruntime>=1.15.0
+
+# Piper TTS (fast local neural TTS)
+piper-tts>=1.2.0
