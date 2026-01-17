@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
     const participantName = request.nextUrl.searchParams.get('participantName');
     const metadata = request.nextUrl.searchParams.get('metadata') ?? '';
     const region = request.nextUrl.searchParams.get('region');
+    const role = request.nextUrl.searchParams.get('role');
+
     if (!LIVEKIT_URL) {
       throw new Error('LIVEKIT_URL is not defined');
     }
@@ -41,9 +43,10 @@ export async function GET(request: NextRequest) {
       {
         identity: `${participantName}__${randomParticipantPostfix}`,
         name: participantName,
-        metadata,
+        metadata: role ? JSON.stringify({ role }) : metadata,
       },
       roomName,
+      role,
     );
 
     // Return connection details
@@ -66,17 +69,21 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function createParticipantToken(userInfo: AccessTokenOptions, roomName: string) {
+function createParticipantToken(userInfo: AccessTokenOptions, roomName: string, role?: string | null) {
   const at = new AccessToken(API_KEY, API_SECRET, userInfo);
   at.ttl = '5m';
   const grant: VideoGrant = {
     room: roomName,
     roomJoin: true,
-    canPublish: true,
+    canPublish: role === 'teacher',
     canPublishData: true,
     canSubscribe: true,
   };
   at.addGrant(grant);
+  // Add classroom specific metadata
+  const currentMetadata = userInfo.metadata ? JSON.parse(userInfo.metadata) : {};
+  const newMetadata = { ...currentMetadata, classroomMode: true };
+  at.metadata = JSON.stringify(newMetadata);
   return at.toJwt();
 }
 

@@ -8,6 +8,8 @@ import {
 } from '@livekit/components-react';
 import { BackgroundBlur, VirtualBackground } from '@livekit/track-processors';
 import { isLocalTrack, LocalTrackPublication, Track } from 'livekit-client';
+import styles from '../styles/CameraSettings.module.css';
+
 // Background image paths
 const BACKGROUND_IMAGES: { name: string; path: any }[] = [];
 
@@ -56,18 +58,8 @@ export function CameraSettings() {
   }, [cameraTrack, backgroundType, virtualBackgroundImagePath]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {camTrackRef && (
-        <VideoTrack
-          style={{
-            maxHeight: '280px',
-            objectFit: 'contain',
-            objectPosition: 'right',
-            transform: 'scaleX(-1)',
-          }}
-          trackRef={camTrackRef}
-        />
-      )}
+    <div className={styles.container}>
+      {camTrackRef && <VideoTrack className={styles.videoTrack} trackRef={camTrackRef} />}
 
       <section className="lk-button-group">
         <TrackToggle source={Track.Source.Camera}>Camera</TrackToggle>
@@ -76,90 +68,47 @@ export function CameraSettings() {
         </div>
       </section>
 
-      <div style={{ marginTop: '10px' }}>
-        <div style={{ marginBottom: '8px' }}>Background Effects</div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      <div className={styles.backgroundEffectsContainer}>
+        <div className={styles.backgroundEffectsLabel}>Background Effects</div>
+        <div className={styles.backgroundOptions}>
           <button
             onClick={() => selectBackground('none')}
-            className="lk-button"
-            aria-pressed={backgroundType === 'none'}
-            style={{
-              border: backgroundType === 'none' ? '2px solid #0090ff' : '1px solid #d1d1d1',
-              minWidth: '80px',
-            }}
+            className={`lk-button ${styles.optionButton} ${backgroundType === 'none' ? styles.optionButtonActive : ''
+              }`}
+            // eslint-disable-next-line react/no-unknown-property
+            aria-pressed={backgroundType === 'none' ? 'true' : 'false'}
           >
             None
           </button>
 
           <button
             onClick={() => selectBackground('blur')}
-            className="lk-button"
-            aria-pressed={backgroundType === 'blur'}
-            style={{
-              border: backgroundType === 'blur' ? '2px solid #0090ff' : '1px solid #d1d1d1',
-              minWidth: '80px',
-              backgroundColor: '#f0f0f0',
-              position: 'relative',
-              overflow: 'hidden',
-              height: '60px',
-            }}
+            className={`lk-button ${styles.optionButton} ${styles.blurButton} ${backgroundType === 'blur' ? styles.optionButtonActive : ''
+              }`}
+            // eslint-disable-next-line react/no-unknown-property
+            aria-pressed={backgroundType === 'blur' ? 'true' : 'false'}
           >
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: '#e0e0e0',
-                filter: 'blur(8px)',
-                zIndex: 0,
-              }}
-            />
-            <span
-              style={{
-                position: 'relative',
-                zIndex: 1,
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                padding: '2px 5px',
-                borderRadius: '4px',
-                fontSize: '12px',
-              }}
-            >
-              Blur
-            </span>
+            <div className={styles.blurPreview} />
+            <span className={styles.blurLabel}>Blur</span>
           </button>
 
           {BACKGROUND_IMAGES.map((image) => (
             <button
               key={image.path.src}
               onClick={() => selectBackground('image', image.path.src)}
-              className="lk-button"
-              aria-pressed={
-                backgroundType === 'image' && virtualBackgroundImagePath === image.path.src
-              }
+              className={`lk-button ${styles.optionButton} ${styles.imageButton} ${backgroundType === 'image' && virtualBackgroundImagePath === image.path.src
+                ? styles.optionButtonActive
+                : ''
+                }`}
+              // eslint-disable-next-line react/no-unknown-property
+              aria-pressed={backgroundType === 'image' && virtualBackgroundImagePath === image.path.src ? 'true' : 'false'}
+              // eslint-disable-next-line react/forbid-dom-props
               style={{
-                backgroundImage: `url(${image.path.src})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                width: '80px',
-                height: '60px',
-                border:
-                  backgroundType === 'image' && virtualBackgroundImagePath === image.path.src
-                    ? '2px solid #0090ff'
-                    : '1px solid #d1d1d1',
+                // @ts-ignore
+                '--bg-image': `url(${image.path.src})`,
               }}
             >
-              <span
-                style={{
-                  backgroundColor: 'rgba(0,0,0,0.6)',
-                  padding: '2px 5px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                }}
-              >
-                {image.name}
-              </span>
+              <span className={styles.imageLabel}>{image.name}</span>
             </button>
           ))}
         </div>

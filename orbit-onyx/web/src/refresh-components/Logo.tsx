@@ -32,9 +32,9 @@ export default function Logo({ folded, size, className }: LogoProps) {
         <div
           className={cn(
             "aspect-square rounded-full overflow-hidden relative flex-shrink-0",
+            `w-[${foldedSize}px] h-[${foldedSize}px]`,
             className
           )}
-          style={{ height: foldedSize, width: foldedSize }}
         >
           <Image
             alt="Logo"

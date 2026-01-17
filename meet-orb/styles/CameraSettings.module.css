@@ -1,0 +1,82 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.videoTrack {
+  max-height: 280px;
+  object-fit: contain;
+  object-position: right;
+  transform: scaleX(-1);
+}
+
+.backgroundEffectsContainer {
+  margin-top: 10px;
+}
+
+.backgroundEffectsLabel {
+  margin-bottom: 8px;
+}
+
+.backgroundOptions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.optionButton {
+  min-width: 80px;
+  border: 1px solid #d1d1d1;
+}
+
+.optionButtonActive {
+  border: 2px solid #0090ff;
+}
+
+.blurButton {
+  position: relative;
+  overflow: hidden;
+  height: 60px;
+  background-color: #f0f0f0;
+}
+
+.blurPreview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e0e0e0;
+  filter: blur(8px);
+  z-index: 0;
+}
+
+.blurLabel {
+  position: relative;
+  z-index: 1;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.imageButton {
+  background-size: cover;
+  background-position: center;
+  width: 80px;
+  height: 60px;
+}
+
+.imageLabel {
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.imageButton {
+    background-image: var(--bg-image);
+    background-size: cover;
+    background-position: center;
+}
